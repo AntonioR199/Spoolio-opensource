@@ -2,11 +2,14 @@ import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
 // Rinfresca la sessione Supabase e protegge tutte le rotte: senza login si viene
-// reindirizzati a /login (eccetto /login e /auth/*).
+// reindirizzati a /login (eccetto /login, /auth/* e /privacy).
 export async function middleware(request: NextRequest) {
   const { response, user, currentLevel, nextLevel } = await updateSession(request);
   const { pathname } = request.nextUrl;
-  const isPublic = pathname.startsWith("/login") || pathname.startsWith("/auth");
+  const isPublic =
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/privacy");
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();

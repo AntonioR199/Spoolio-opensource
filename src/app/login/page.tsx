@@ -158,7 +158,10 @@ export default function LoginPage() {
           </Button>
 
           <p className="text-center text-[11px] text-muted-foreground">
-            Spoolio · un progetto DomoticLab
+            Spoolio · un progetto DomoticLab ·{" "}
+            <a href="/privacy" className="underline hover:text-foreground">
+              Privacy
+            </a>
           </p>
         </CardContent>
       </Card>

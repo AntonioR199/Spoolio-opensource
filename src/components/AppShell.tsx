@@ -4,12 +4,16 @@ import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import ChatWidget from "@/components/ChatWidget";
 
-// Mostra la sidebar+layout app ovunque, tranne nelle pagine di autenticazione.
+// Mostra la sidebar+layout app ovunque, tranne nelle pagine di autenticazione e
+// nell'informativa privacy (pagine pubbliche, autoconsistenti).
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/auth");
+  const isStandalone =
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/privacy");
 
-  if (isAuthPage) return <>{children}</>;
+  if (isStandalone) return <>{children}</>;
 
   return (
     <div className="md:flex">

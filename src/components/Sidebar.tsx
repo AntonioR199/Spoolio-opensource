@@ -79,7 +79,7 @@ function Brand() {
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
-    <nav className="flex flex-col gap-5 px-3 py-4">
+    <nav className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-3 py-4">
       {NAV.map((group) => (
         <div key={group.section}>
           <div className="px-2 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -185,6 +185,9 @@ function Footer() {
       <p className="mt-2 text-[10px] leading-tight text-muted-foreground">
         © 2026 DomoticLab · Tutti i diritti riservati
       </p>
+      <Link href="/privacy" className="mt-1 inline-block text-[10px] text-muted-foreground underline hover:text-foreground">
+        Informativa privacy e cookie
+      </Link>
     </div>
   );
 }
