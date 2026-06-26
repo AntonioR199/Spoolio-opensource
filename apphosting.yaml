@@ -1,0 +1,45 @@
+# Firebase App Hosting — configurazione di build/runtime per Spoolio (Next.js SSR).
+# Docs: https://firebase.google.com/docs/app-hosting/configure
+#
+# Il deploy è automatico: App Hosting è collegato a questa repo GitHub e a ogni
+# push sul branch "live" (main) builda e rilascia. Nessun workflow di deploy
+# custom necessario.
+#
+# I valori sensibili NON stanno qui: sono "secret" in Cloud Secret Manager,
+# referenziati per nome. Crea i secret una volta con:
+#   firebase apphosting:secrets:set NEXT_PUBLIC_SUPABASE_URL
+#   firebase apphosting:secrets:set NEXT_PUBLIC_SUPABASE_ANON_KEY
+#   firebase apphosting:secrets:set ANTHROPIC_API_KEY   # opzionale
+# e concedi l'accesso al backend:
+#   firebase apphosting:secrets:grantaccess <NOME_SECRET> --backend <BACKEND>
+
+runConfig:
+  # Risorse del container Cloud Run. Adegua se serve.
+  cpu: 1
+  memoryMiB: 512
+  maxInstances: 2
+  minInstances: 0
+  concurrency: 80
+
+env:
+  # URL e anon key della tua Supabase CLOUD (non la service_role).
+  # Servono sia a build-time (NEXT_PUBLIC_* viene inlinata nel bundle) che a
+  # runtime, quindi availability include BUILD e RUNTIME.
+  - variable: NEXT_PUBLIC_SUPABASE_URL
+    secret: NEXT_PUBLIC_SUPABASE_URL
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_SUPABASE_ANON_KEY
+    secret: NEXT_PUBLIC_SUPABASE_ANON_KEY
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # Opzionale: fallback AI per il parsing delle fatture non-Bambu. Solo runtime.
+  # Se non usi l'AI, NON creare questo secret e rimuovi il blocco sotto.
+  - variable: ANTHROPIC_API_KEY
+    secret: ANTHROPIC_API_KEY
+    availability:
+      - RUNTIME

@@ -1,0 +1,4 @@
+# Ogni modifica richiede la review del maintainer.
+# Con la branch protection "Require review from Code Owners" attiva, nessuna PR
+# può essere unita senza l'approvazione di @AntonioR199.
+* @AntonioR199

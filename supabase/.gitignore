@@ -1,0 +1,4 @@
+# File generati/locali dello stack Supabase — non vanno versionati.
+.branches
+.temp
+.env

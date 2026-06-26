@@ -1,0 +1,55 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# env files: ignora qualsiasi .env*, tranne l'esempio versionato
+.env*
+!.env.example
+
+# vercel
+.vercel
+
+# firebase (config/credenziali locali, fuori dal repo pubblico)
+.firebaserc
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+apphosting-debug.log*
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# database e dati locali
+data/filament.db
+data/filament.db-shm
+data/filament.db-wal
+data/invoices/
+
+# claude
+.claude/
+
+# documenti interni (note di handover, non per il repo pubblico)
+CLAUDE.md
+MIGRATION.md
+AGENTS.md
