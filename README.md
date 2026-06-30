@@ -165,4 +165,4 @@ Testo completo in [LICENSE](LICENSE).
 
 ---
 
-© 2026 **DomoticLab** — [domotic-lab.it](https://www.domotic-lab.it/).
+™ 2026 **DomoticLab** — [domotic-lab.it](https://www.domotic-lab.it/).

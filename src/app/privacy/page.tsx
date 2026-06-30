@@ -198,7 +198,7 @@ export default function PrivacyPage() {
         </div>
 
         <footer className="mt-12 border-t pt-6 text-center text-[11px] text-muted-foreground">
-          © 2026 DomoticLab — Spoolio
+          ™ 2026 DomoticLab — Spoolio
         </footer>
       </main>
     </div>

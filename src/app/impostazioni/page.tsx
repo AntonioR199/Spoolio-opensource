@@ -402,7 +402,7 @@ export default function ImpostazioniPage() {
           <CardTitle className="text-base">Info</CardTitle>
         </CardHeader>
         <CardContent className="space-y-1 text-sm text-muted-foreground">
-          <p>Spoolio · v0.1</p>
+          <p>Spoolio · v0.2</p>
           <p>
             Un progetto{" "}
             <a
@@ -413,7 +413,7 @@ export default function ImpostazioniPage() {
             >
               DomoticLab
             </a>{" "}
-            · © 2026 · Tutti i diritti riservati
+            · ™ 2026 · Tutti i diritti riservati
           </p>
         </CardContent>
       </Card>

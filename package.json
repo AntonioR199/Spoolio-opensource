@@ -5,7 +5,7 @@
   "description": "Spoolio — il tuo magazzino filamenti per stampa 3D. Un progetto DomoticLab",
   "author": "DomoticLab (https://www.domotic-lab.it/)",
   "license": "LicenseRef-AGPL-3.0-only-WITH-Commons-Clause",
-  "copyright": "© 2026 DomoticLab. Codice source-available (AGPL-3.0 + Commons Clause): uso e modifica liberi, vietata la vendita. Vedi LICENSE.",
+  "copyright": "™ 2026 DomoticLab. Codice source-available (AGPL-3.0 + Commons Clause): uso e modifica liberi, vietata la vendita. Vedi LICENSE.",
   "scripts": {
     "dev": "next dev -p 3220",
     "build": "next build",
