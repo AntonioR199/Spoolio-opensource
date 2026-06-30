@@ -175,7 +175,13 @@ export default function StampantiPage() {
             <Label>Preset</Label>
             <Select onValueChange={(v) => v != null && applyPreset(String(v))}>
               <SelectTrigger className="w-full sm:w-96">
-                <SelectValue placeholder="Scegli un modello dal mercato…" />
+                <SelectValue placeholder="Scegli un modello dal mercato…">
+                  {(v: string | null) => {
+                    if (v == null || v === "") return "Scegli un modello dal mercato…";
+                    const p = PRINTER_PRESETS[Number(v)];
+                    return p ? `${p.brand} ${p.model}` : "Scegli un modello dal mercato…";
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {PRINTER_PRESETS.map((p, i) => (
