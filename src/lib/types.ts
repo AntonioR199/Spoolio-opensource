@@ -1,6 +1,7 @@
 // Tipi condivisi per l'inventario filamenti.
 
 export type SpoolFormat = "spool" | "refill";
+// sealed = chiusa/sigillata, open = in uso (countdown asciugatura attivo), empty = finita
 export type SpoolStatus = "sealed" | "open" | "empty";
 
 /** Una singola unità fisica di filamento (bobina o ricarica). */
@@ -22,7 +23,8 @@ export interface Spool {
   unit_price: number | null;
   status: SpoolStatus;
   remaining_g: number | null; // null finché non si passa al tracking a grammi
-  last_dried_at: string | null; // fase 2
+  opened_at: string | null; // quando è stata messa in uso (ISO); àncora del countdown asciugatura
+  last_dried_at: string | null; // ultima asciugatura (ISO); flag "da asciugare" derivato per soglia giorni
   consumed_at: string | null; // quando la bobina è stata terminata
   notes: string | null;
   created_at: string;
@@ -40,6 +42,9 @@ export interface InventoryRow {
   total_weight_g: number; // somma pesi nominali, utile per stima scorta
   unit_price: number | null; // prezzo medio per unità del gruppo (null se nessuna unità ha prezzo)
   low_stock: boolean;
+  in_use: number; // quante unità del gruppo sono in uso (status='open')
+  last_dried_at: string | null; // asciugatura più recente tra le unità in uso (ISO), null se nessuna
+  needs_drying: boolean; // true se almeno un'unità in uso ha superato la soglia di giorni dall'asciugatura/apertura
 }
 
 /** Voce estratta da una fattura, prima della conferma utente. */

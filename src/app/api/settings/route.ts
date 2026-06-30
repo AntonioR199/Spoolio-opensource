@@ -19,6 +19,7 @@ export async function GET() {
 
 const schema = z.object({
   lowStockThreshold: z.number().int().min(0).optional(),
+  dryIntervalDays: z.number().int().min(1).optional(),
   defaultBrand: z.string().min(1).optional(),
   defaultDiameterMm: z.number().positive().optional(),
   defaultWeightG: z.number().int().positive().optional(),

@@ -33,7 +33,7 @@ export async function GET() {
         id INTEGER PRIMARY KEY, brand TEXT, material TEXT, variant TEXT, color_name TEXT,
         color_code TEXT, color_hex TEXT, format TEXT, diameter_mm REAL, nominal_weight_g INTEGER,
         sku TEXT, source TEXT, purchase_date TEXT, unit_price REAL, status TEXT, remaining_g INTEGER,
-        consumed_at TEXT, notes TEXT
+        opened_at TEXT, last_dried_at TEXT, consumed_at TEXT, notes TEXT
       );
     `);
 
@@ -60,13 +60,13 @@ export async function GET() {
     );
     ins(`INSERT INTO setting (key,value) VALUES (?,?)`, settings.data ?? [], (r) => [r.key, r.value]);
     ins(
-      `INSERT INTO spool (id,brand,material,variant,color_name,color_code,color_hex,format,diameter_mm,nominal_weight_g,sku,source,purchase_date,unit_price,status,remaining_g,consumed_at,notes)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      `INSERT INTO spool (id,brand,material,variant,color_name,color_code,color_hex,format,diameter_mm,nominal_weight_g,sku,source,purchase_date,unit_price,status,remaining_g,opened_at,last_dried_at,consumed_at,notes)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       spools.data ?? [],
       (r) => [
         r.id, r.brand, r.material, r.variant, r.color_name, r.color_code, r.color_hex, r.format,
         r.diameter_mm, r.nominal_weight_g, r.sku, r.source, r.purchase_date, r.unit_price, r.status,
-        r.remaining_g, r.consumed_at, r.notes,
+        r.remaining_g, r.opened_at, r.last_dried_at, r.consumed_at, r.notes,
       ]
     );
     db.close();

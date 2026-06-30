@@ -66,8 +66,9 @@ create table if not exists spool (
   source           text,
   purchase_date    date,
   unit_price       numeric(10,2),
-  status           text not null default 'sealed',
+  status           text not null default 'sealed',  -- 'sealed' (chiusa), 'open' (in uso), 'empty' (finita)
   remaining_g      integer,
+  opened_at        timestamptz,                      -- quando la bobina è stata messa in uso (àncora countdown asciugatura)
   last_dried_at    timestamptz,
   consumed_at      timestamptz,
   notes            text,

@@ -119,6 +119,8 @@ export async function POST(req: NextRequest) {
           notes: s.notes ?? null,
         };
         if (cols.has("consumed_at")) row.consumed_at = s.consumed_at ?? null;
+        if (cols.has("opened_at")) row.opened_at = s.opened_at ?? null;
+        if (cols.has("last_dried_at")) row.last_dried_at = s.last_dried_at ?? null;
         return row;
       });
       for (let i = 0; i < spoolRows.length; i += 500) {

@@ -4,7 +4,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { resolveColorHex } from "./colors";
 import { ensureBrand } from "./catalog";
-import { getLowStockThreshold } from "./settings";
+import { getLowStockThreshold, getDryIntervalDays } from "./settings";
 import type { DraftItem, InventoryRow, Spool } from "./types";
 
 export interface GroupKey {
@@ -37,8 +37,14 @@ export async function getInventory(): Promise<InventoryRow[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("spool")
-    .select("brand, material, variant, color_name, color_code, color_hex, nominal_weight_g, unit_price")
+    .select("brand, material, variant, color_name, color_code, color_hex, nominal_weight_g, unit_price, status, opened_at, last_dried_at")
     .neq("status", "empty");
+
+  const threshold = await getLowStockThreshold();
+  const dryIntervalDays = await getDryIntervalDays();
+  // Una bobina in uso è "da asciugare" se la sua asciugatura — o, se mai asciugata,
+  // la sua apertura — è anteriore a questo istante. Le bobine chiuse non contano.
+  const dryCutoff = new Date(Date.now() - dryIntervalDays * 86_400_000).toISOString();
 
   // Accumula somma e conteggio dei prezzi noti per calcolare la media di gruppo.
   type Acc = InventoryRow & { priceSum: number; pricedCount: number };
@@ -46,6 +52,10 @@ export async function getInventory(): Promise<InventoryRow[]> {
   for (const r of data ?? []) {
     const k = groupKeyStr(r);
     const priced = r.unit_price != null ? Number(r.unit_price) : null;
+    const inUse = r.status === "open";
+    // Per le bobine in uso: àncora = ultima asciugatura, altrimenti l'apertura.
+    const anchor = inUse ? r.last_dried_at ?? r.opened_at : null;
+    const overdue = inUse && (anchor == null || anchor < dryCutoff);
     const cur = map.get(k);
     if (cur) {
       cur.quantity += 1;
@@ -54,6 +64,12 @@ export async function getInventory(): Promise<InventoryRow[]> {
       if (priced != null) {
         cur.priceSum += priced;
         cur.pricedCount += 1;
+      }
+      if (inUse) cur.in_use += 1;
+      if (overdue) cur.needs_drying = true;
+      // Asciugatura più recente tra le bobine in uso.
+      if (inUse && r.last_dried_at && (!cur.last_dried_at || r.last_dried_at > cur.last_dried_at)) {
+        cur.last_dried_at = r.last_dried_at;
       }
     } else {
       map.set(k, {
@@ -67,13 +83,15 @@ export async function getInventory(): Promise<InventoryRow[]> {
         total_weight_g: r.nominal_weight_g ?? 0,
         unit_price: null,
         low_stock: false,
+        in_use: inUse ? 1 : 0,
+        last_dried_at: inUse ? r.last_dried_at ?? null : null,
+        needs_drying: overdue,
         priceSum: priced ?? 0,
         pricedCount: priced != null ? 1 : 0,
       });
     }
   }
 
-  const threshold = await getLowStockThreshold();
   return [...map.values()]
     .map(({ priceSum, pricedCount, ...r }) => ({
       ...r,
@@ -264,6 +282,52 @@ export async function setGroupPrice(key: GroupKey, unitPrice: number | null): Pr
   return data?.length ?? 0;
 }
 
+/** Marca le unità in uso (status='open') di una voce come asciugate ora. */
+export async function setGroupDried(key: GroupKey): Promise<number> {
+  const supabase = await createClient();
+  const { data } = await filterGroup(
+    supabase.from("spool").update({ last_dried_at: new Date().toISOString() }),
+    key
+  )
+    .eq("status", "open")
+    .select("id");
+  return data?.length ?? 0;
+}
+
+/** Mette in uso una bobina chiusa della voce: status 'sealed' -> 'open', avvia il countdown. */
+export async function openSpool(key: GroupKey): Promise<number> {
+  const supabase = await createClient();
+  const { data: rep } = await filterGroup(supabase.from("spool").select("id"), key)
+    .eq("status", "sealed")
+    .order("id")
+    .limit(1)
+    .maybeSingle();
+  if (!rep) return 0;
+  const { error } = await supabase
+    .from("spool")
+    .update({ status: "open", opened_at: new Date().toISOString(), last_dried_at: null })
+    .eq("id", rep.id);
+  if (error) throw new Error(error.message);
+  return 1;
+}
+
+/** Rimette tra le chiuse una bobina in uso: status 'open' -> 'sealed', azzera il countdown. */
+export async function closeSpool(key: GroupKey): Promise<number> {
+  const supabase = await createClient();
+  const { data: rep } = await filterGroup(supabase.from("spool").select("id"), key)
+    .eq("status", "open")
+    .order("id")
+    .limit(1)
+    .maybeSingle();
+  if (!rep) return 0;
+  const { error } = await supabase
+    .from("spool")
+    .update({ status: "sealed", opened_at: null, last_dried_at: null })
+    .eq("id", rep.id);
+  if (error) throw new Error(error.message);
+  return 1;
+}
+
 /** Restituisce le unità attive (non esaurite) di una voce, per la modale dettagli. */
 export async function getGroupDetail(key: GroupKey): Promise<Spool[]> {
   const supabase = await createClient();
@@ -276,8 +340,10 @@ export async function getGroupDetail(key: GroupKey): Promise<Spool[]> {
 /** Segna N unità di una voce come esaurite (status='empty'). Mantiene lo storico. */
 export async function consumeGroup(key: GroupKey, quantity: number): Promise<number> {
   const supabase = await createClient();
+  // Scarica prima le bobine in uso ('open' < 'sealed'), così "finita" termina quella aperta.
   const { data: ids } = await filterGroup(supabase.from("spool").select("id"), key)
     .neq("status", "empty")
+    .order("status", { ascending: true })
     .order("id")
     .limit(quantity);
   const idList = (ids ?? []).map((r) => r.id);
