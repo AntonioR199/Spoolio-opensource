@@ -11,7 +11,6 @@ import {
   FileUp,
   FileText,
   Printer,
-  Droplet,
   Settings,
   Menu,
   PackageX,
@@ -22,14 +21,12 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 
 type Item = {
   href?: string;
   label: string;
   icon: ComponentType<{ className?: string }>;
-  soon?: boolean;
 };
 
 const NAV: Array<{ section: string; items: Item[] }> = [
@@ -51,10 +48,6 @@ const NAV: Array<{ section: string; items: Item[] }> = [
       { href: "/marchi", label: "Marchi e store", icon: Store },
       { href: "/impostazioni", label: "Impostazioni", icon: Settings },
     ],
-  },
-  {
-    section: "Presto disponibile",
-    items: [{ label: "Asciugatura", icon: Droplet, soon: true }],
   },
 ];
 
@@ -88,20 +81,6 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
           <div className="flex flex-col gap-0.5">
             {group.items.map((it) => {
               const Icon = it.icon;
-              if (it.soon) {
-                return (
-                  <div
-                    key={it.label}
-                    className="flex cursor-not-allowed items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-muted-foreground/60"
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span>{it.label}</span>
-                    <Badge variant="secondary" className="ml-auto text-[9px] uppercase">
-                      soon
-                    </Badge>
-                  </div>
-                );
-              }
               const active = pathname === it.href;
               return (
                 <Button
