@@ -15,6 +15,16 @@ tipologie, aggiorni l'inventario importando le fatture in PDF o inserendo prodot
 a mano, tieni traccia di consumi, valore e riacquisti. Multi-utente: ogni account
 vede solo i propri dati. UI e contenuti in **italiano**.
 
+## Screenshot
+
+| Inventario | Dettaglio bobina (asciugatura) |
+|---|---|
+| ![Inventario filamenti](docs/screenshots/inventario.png) | ![Dettaglio bobina con tracciamento asciugatura](docs/screenshots/dettaglio-asciugatura.png) |
+
+| Dashboard | Assistente AI |
+|---|---|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Assistente Spoolio](docs/screenshots/assistente.png) |
+
 ## Stack
 
 - **Next.js 16** (App Router) + **React 19** + **TypeScript**
