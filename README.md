@@ -145,7 +145,6 @@ Spoolio è gratuito e source-available. Se ti è utile e vuoi offrirmi un caffè
 ## Roadmap (idee)
 
 - Tracking a grammi (`remaining_g`) con pesata bobina
-- ✅ Bobine "in uso" con data ultima asciugatura e flag "da asciugare" (countdown solo sulle bobine aperte, soglia giorni configurabile)
 - Slot AMS
 - Import fattura direttamente dall'assistente
 
