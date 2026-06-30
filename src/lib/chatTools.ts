@@ -55,6 +55,7 @@ export const TOOLS: ToolDef[] = [
     description:
       "Elenca le voci di inventario attive (non esaurite) con marca, materiale, variante, " +
       "colore, codice colore, quantità e prezzo medio per unità (in €, null se non registrato). " +
+      "Include le bobine in uso (in_use), l'ultima asciugatura (last_dried_at) e se la voce è da riasciugare (needs_drying). " +
       "Usalo per rispondere a domande sulle scorte e sul costo/prezzo di una voce, e per " +
       "individuare la voce esatta (GroupKey) prima di proporre un'azione. Filtro opzionale.",
     parameters: {
@@ -182,6 +183,9 @@ export async function executeReadTool(name: string, args: Record<string, unknown
         low_stock: r.low_stock,
         total_weight_g: r.total_weight_g,
         unit_price: r.unit_price, // prezzo medio per unità (€), null se non registrato
+        in_use: r.in_use, // quante bobine sono in uso (aperte); le altre sono chiuse
+        last_dried_at: r.last_dried_at, // asciugatura più recente tra le bobine in uso (ISO), null se nessuna
+        needs_drying: r.needs_drying, // true se una bobina in uso ha superato la soglia di giorni
       }));
     }
     case "statistiche":

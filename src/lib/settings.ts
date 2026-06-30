@@ -4,6 +4,7 @@ import { createClient, requireUserId } from "@/lib/supabase/server";
 
 export interface AppSettings {
   lowStockThreshold: number;
+  dryIntervalDays: number;
   defaultBrand: string;
   defaultDiameterMm: number;
   defaultWeightG: number;
@@ -15,6 +16,7 @@ export interface AppSettings {
 
 export const DEFAULT_SETTINGS: AppSettings = {
   lowStockThreshold: 1,
+  dryIntervalDays: 30,
   defaultBrand: "Bambu Lab",
   defaultDiameterMm: 1.75,
   defaultWeightG: 1000,
@@ -37,6 +39,7 @@ export async function getSettings(): Promise<AppSettings> {
   const printerId = printerRaw ? Number(printerRaw) : NaN;
   return {
     lowStockThreshold: num("lowStockThreshold", DEFAULT_SETTINGS.lowStockThreshold),
+    dryIntervalDays: num("dryIntervalDays", DEFAULT_SETTINGS.dryIntervalDays),
     defaultBrand: map.get("defaultBrand") ?? DEFAULT_SETTINGS.defaultBrand,
     defaultDiameterMm: num("defaultDiameterMm", DEFAULT_SETTINGS.defaultDiameterMm),
     defaultWeightG: num("defaultWeightG", DEFAULT_SETTINGS.defaultWeightG),
@@ -64,6 +67,11 @@ export async function updateSettings(patch: Partial<AppSettings>): Promise<AppSe
 
 export async function getLowStockThreshold(): Promise<number> {
   return (await getSettings()).lowStockThreshold;
+}
+
+/** Giorni dopo i quali un filamento asciugato è considerato "da asciugare". */
+export async function getDryIntervalDays(): Promise<number> {
+  return (await getSettings()).dryIntervalDays;
 }
 
 /** Chiave API AI (per-utente; fallback su ANTHROPIC_API_KEY d'ambiente). */

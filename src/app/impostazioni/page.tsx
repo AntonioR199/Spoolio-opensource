@@ -159,6 +159,14 @@ export default function ImpostazioniPage() {
                     onChange={(e) => set("lowStockThreshold", parseInt(e.target.value || "0", 10))}
                   />
                 </Field>
+                <Field label="Avviso 'da asciugare' (giorni)">
+                  <Input
+                    type="number"
+                    min={1}
+                    value={settings.dryIntervalDays}
+                    onChange={(e) => set("dryIntervalDays", parseInt(e.target.value || "30", 10))}
+                  />
+                </Field>
                 <Field label="Marca predefinita">
                   <Input
                     value={settings.defaultBrand}
@@ -402,7 +410,7 @@ export default function ImpostazioniPage() {
           <CardTitle className="text-base">Info</CardTitle>
         </CardHeader>
         <CardContent className="space-y-1 text-sm text-muted-foreground">
-          <p>Spoolio · v0.2</p>
+          <p>Spoolio · v1.0.0</p>
           <p>
             Un progetto{" "}
             <a

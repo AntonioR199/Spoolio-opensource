@@ -10,8 +10,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Pencil } from "lucide-react";
+import { Pencil, Droplets } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { typeLabel } from "@/lib/labels";
@@ -36,6 +37,10 @@ function uniq(values: Array<string | null>): string[] {
   return [...new Set(values.filter((v): v is string => !!v))];
 }
 
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("it-IT", { day: "numeric", month: "short", year: "numeric" });
+}
+
 export default function ItemDetailModal({
   row,
   onClose,
@@ -51,6 +56,8 @@ export default function ItemDetailModal({
   const [confirmConsume, setConfirmConsume] = useState(false);
   const [editingPrice, setEditingPrice] = useState(false);
   const [priceInput, setPriceInput] = useState("");
+  const [dryIntervalDays, setDryIntervalDays] = useState(30);
+  const [loadedAt, setLoadedAt] = useState(0); // istante del caricamento, per il countdown asciugatura
 
   const load = useCallback(async () => {
     const res = await fetch("/api/group", {
@@ -61,6 +68,8 @@ export default function ItemDetailModal({
     const data = await res.json();
     setSpools(data.spools ?? []);
     setInvoiceSources(data.invoiceSources ?? []);
+    if (typeof data.dryIntervalDays === "number") setDryIntervalDays(data.dryIntervalDays);
+    setLoadedAt(Date.now());
   }, [row]);
 
   useEffect(() => {
@@ -139,6 +148,17 @@ export default function ItemDetailModal({
   const totalWeightKg = spools ? spools.reduce((s, x) => s + x.nominal_weight_g, 0) / 1000 : 0;
   const diam = spools?.[0]?.diameter_mm ?? null;
   const weightG = spools?.[0]?.nominal_weight_g ?? null;
+  // Asciugatura riferita alle sole bobine in uso (status='open').
+  const openSpools = spools?.filter((s) => s.status === "open") ?? [];
+  const openCount = openSpools.length;
+  const canOpen = qty - openCount > 0; // c'è almeno una bobina chiusa
+  const driedDates = uniq(openSpools.map((s) => s.last_dried_at));
+  const lastDried = driedDates.length ? driedDates.sort().at(-1)! : null;
+  const dryCutoff = loadedAt - dryIntervalDays * 86_400_000;
+  const needsDrying = loadedAt > 0 && openSpools.some((s) => {
+    const anchor = s.last_dried_at ?? s.opened_at;
+    return anchor == null || new Date(anchor).getTime() < dryCutoff;
+  });
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -233,11 +253,55 @@ export default function ItemDetailModal({
             </dd>
           </div>
           <Detail label="Date acquisto" value={dates.length ? dates.join(", ") : "—"} span2 />
+          <Detail label="Bobine in uso" value={`${openCount} / ${qty}`} />
+          <div>
+            <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">Ultima asciugatura</dt>
+            <dd className="mt-0.5 flex flex-wrap items-center gap-2">
+              {openCount === 0 ? "—" : lastDried ? formatDate(lastDried) : "Mai asciugata"}
+              {needsDrying && (
+                <Badge variant="secondary" className="gap-1 text-sky-700 dark:text-sky-400">
+                  <Droplets className="h-3.5 w-3.5" /> Da asciugare
+                </Badge>
+              )}
+            </dd>
+          </div>
         </dl>
 
         <Separator />
 
-        {/* Azioni */}
+        {/* Asciugatura / uso bobine */}
+        {!confirmConsume && (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              disabled={busy || !canOpen}
+              onClick={() => act("/api/open", "Bobina messa in uso")}
+              title="Apri una bobina chiusa: avvia il countdown asciugatura"
+            >
+              <Droplets className="h-4 w-4" /> Apri una bobina
+            </Button>
+            <Button
+              variant="outline"
+              disabled={busy || openCount === 0}
+              onClick={() => act("/api/close", "Bobina rimessa tra le chiuse")}
+              title="Rimetti tra le chiuse una bobina in uso: azzera il countdown"
+            >
+              Rimetti chiusa
+            </Button>
+            <Button
+              variant="outline"
+              disabled={busy || openCount === 0}
+              onClick={() => act("/api/dry", "Asciugatura registrata")}
+              title="Registra l'asciugatura di oggi sulle bobine in uso"
+            >
+              Asciugato oggi
+            </Button>
+          </div>
+        )}
+
+        <Separator />
+
+        {/* Azioni inventario */}
         {!confirmConsume ? (
           <div className="flex flex-wrap gap-2">
             <Button

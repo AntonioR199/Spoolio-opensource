@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight, Search, TriangleAlert } from "lucide-react";
+import { ChevronRight, Search, TriangleAlert, Droplets } from "lucide-react";
 import type { InventoryRow } from "@/lib/types";
 import ItemDetailModal from "./ItemDetailModal";
 import { Card, CardContent } from "@/components/ui/card";
@@ -38,6 +38,7 @@ export default function InventoryView({ rows, stats }: { rows: InventoryRow[]; s
   const [material, setMaterial] = useState<string | null>(null);
   const [brand, setBrand] = useState<string | null>(null);
   const [onlyLow, setOnlyLow] = useState(false);
+  const [onlyDry, setOnlyDry] = useState(false);
   const [selected, setSelected] = useState<InventoryRow | null>(null);
 
   const filtered = useMemo(() => {
@@ -46,6 +47,7 @@ export default function InventoryView({ rows, stats }: { rows: InventoryRow[]; s
       if (material && r.material !== material) return false;
       if (brand && r.brand !== brand) return false;
       if (onlyLow && !r.low_stock) return false;
+      if (onlyDry && !r.needs_drying) return false;
       if (!q) return true;
       return (
         r.color_name.toLowerCase().includes(q) ||
@@ -54,7 +56,7 @@ export default function InventoryView({ rows, stats }: { rows: InventoryRow[]; s
         groupLabel(r).toLowerCase().includes(q)
       );
     });
-  }, [rows, query, material, brand, onlyLow]);
+  }, [rows, query, material, brand, onlyLow, onlyDry]);
 
   const groups = useMemo(() => {
     const map = new Map<string, InventoryRow[]>();
@@ -67,6 +69,7 @@ export default function InventoryView({ rows, stats }: { rows: InventoryRow[]; s
 
   const materials = stats.byMaterial.map((m) => m.material);
   const lowCount = rows.filter((r) => r.low_stock).length;
+  const dryCount = rows.filter((r) => r.needs_drying).length;
 
   return (
     <div className="space-y-6">
@@ -108,6 +111,13 @@ export default function InventoryView({ rows, stats }: { rows: InventoryRow[]; s
           onClick={() => setOnlyLow((v) => !v)}
         >
           <TriangleAlert className="h-3.5 w-3.5" /> Scorta bassa
+        </Button>
+        <Button
+          variant={onlyDry ? "default" : "outline"}
+          size="sm"
+          onClick={() => setOnlyDry((v) => !v)}
+        >
+          <Droplets className="h-3.5 w-3.5" /> Da asciugare{dryCount > 0 ? ` (${dryCount})` : ""}
         </Button>
       </div>
 
@@ -161,6 +171,12 @@ export default function InventoryView({ rows, stats }: { rows: InventoryRow[]; s
                         {r.brand}
                       </Badge>
                       {r.color_code && <span>{r.color_code}</span>}
+                      {r.in_use > 0 && <span>{r.in_use} in uso</span>}
+                      {r.needs_drying && (
+                        <span className="inline-flex items-center gap-0.5 text-sky-600 dark:text-sky-400">
+                          <Droplets className="h-3 w-3" /> da asciugare
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
