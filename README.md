@@ -41,23 +41,36 @@ Puoi **collegare la tua stampante in sola lettura** e vederne lo stato dal vivo,
 
 ![Stato stampante in tempo reale](docs/screenshots/stampante.png)
 
-**Modelli supportati.** In questa versione: **Bambu Lab** via **rete locale (LAN)**. Il livello di lettura è però costruito con adapter astratti, così in futuro si potranno aggiungere altri marchi (Prusa/PrusaLink, Klipper/Moonraker, OctoPrint — tutti protocolli locali).
+**Marchi supportati.** La lettura è **read-only** e avviene tutta in **rete locale (LAN)**. Il livello è costruito con adapter astratti, uno per protocollo, così la UI resta unica per tutti:
 
-**Come si collega (Bambu Lab).**
+| Metodo di connessione | Copre | Come funziona | Cosa ti serve |
+| --- | --- | --- | --- |
+| **Bambu Lab (LAN · MQTT)** | Bambu Lab (A1, P1, X1, H2D…) | MQTT locale su porta 8883 | IP, numero di serie, **access code LAN** |
+| **Prusa (PrusaLink)** | Prusa (MK4/MK4S, XL, MINI+, CORE One…) | HTTP `GET /api/v1/status` | IP, **API key** di PrusaLink |
+| **Klipper (Moonraker)** | Creality K1/K2, Elegoo Centauri, Voron, Sonic Pad e altre macchine Klipper | HTTP `GET /printer/objects/query` | IP e **porta** (default 7125); API key solo se l'hai impostata |
 
-1. Vai su **Le mie stampanti**, aggiungi/scegli una stampante Bambu Lab e premi **Collega**.
-2. Inserisci **Indirizzo IP**, **Numero di serie** e **Access code LAN**. Li trovi sullo schermo della stampante in **Impostazioni → Rete** (sezione *"LAN Only"*): lì sono elencati IP, seriale e access code.
-3. Premi **Prova connessione** per verificare, poi **Salva collegamento**.
+> Non esiste un protocollo universale: l'MQTT di Bambu è proprietario e **non** vale per gli altri marchi, che espongono invece la loro API LAN nativa (HTTP). Per questo il metodo si sceglie in base al protocollo della stampante, non solo al marchio.
+
+**Come si collega.**
+
+1. Vai su **Le mie stampanti**, aggiungi/scegli la stampante e premi **Collega**.
+2. Scegli il **Metodo di connessione** (è preselezionato in base alla marca, ma puoi cambiarlo). I campi si adattano al metodo scelto.
+3. Compila **Indirizzo IP** e le credenziali richieste dal metodo:
+   - **Bambu Lab**: numero di serie + access code LAN. Li trovi sullo schermo in **Impostazioni → Rete** (sezione *"LAN Only"*).
+   - **Prusa (PrusaLink)**: API key da **Impostazioni → Rete → PrusaLink** sulla stampante.
+   - **Klipper (Moonraker)**: porta di Moonraker (di norma **7125**); in LAN di solito non serve alcuna chiave.
+4. Premi **Prova connessione** per verificare, poi **Salva collegamento**.
 
 Fatto questo, sulla card compare il badge **Collegata** e lo stato live appare in dashboard sotto la stampante predefinita.
 
-> **Non devi attivare la modalità "LAN Only".** L'access code è mostrato in quella sezione ma funziona anche a modalità cloud attiva: la stampante resta collegata al cloud Bambu (Handy continua a funzionare). La lettura avviene via MQTT locale sulla porta 8883.
+> **Bambu — non devi attivare la modalità "LAN Only".** L'access code è mostrato in quella sezione ma funziona anche a modalità cloud attiva: la stampante resta collegata al cloud Bambu (Handy continua a funzionare).
 
 **Requisiti e note.**
 
 - Spoolio deve trovarsi sulla **stessa rete locale** della stampante: quindi questa funzione è pensata per chi **self-hosta** l'app in casa (l'istanza cloud remota non raggiunge la LAN). Vedi [Avvio locale](#avvio-locale-consigliato-senza-cloud).
-- L'access code è un **segreto**: viene salvato per-utente (protetto da RLS) e **non è mai inviato al browser**.
-- Le **P1/A1 accettano un solo client MQTT locale alla volta**: se sulla stessa rete tieni aperto Bambu Studio (che si connette in locale), lo stato può alternarsi Online/Offline. Le X1 non hanno questo limite.
+- Le credenziali (access code Bambu, API key Prusa) sono un **segreto**: vengono salvate per-utente (protette da RLS) e **non sono mai inviate al browser**.
+- Le **Bambu P1/A1 accettano un solo client MQTT locale alla volta**: se sulla stessa rete tieni aperto Bambu Studio (che si connette in locale), lo stato può alternarsi Online/Offline. Le X1 non hanno questo limite.
+- Vuoi aggiungere un altro protocollo (es. OctoPrint)? Basta un nuovo adapter in `src/lib/printer-monitor/` che implementa `PrinterAdapter` e lo registra: la UI e il modello di stato normalizzato restano invariati.
 
 ## Avvio locale (consigliato, senza cloud)
 
