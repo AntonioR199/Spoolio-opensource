@@ -162,7 +162,7 @@ function Footer() {
         />
       </a>
       <p className="mt-2 text-[10px] leading-tight text-muted-foreground">
-        ™ 2026 DomoticLab · Tutti i diritti riservati
+        ™ DomoticLab 2025-2026 · Tutti i diritti riservati
       </p>
       <Link href="/privacy" className="mt-1 inline-block text-[10px] text-muted-foreground underline hover:text-foreground">
         Informativa privacy e cookie

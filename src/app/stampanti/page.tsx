@@ -2,15 +2,23 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Star, Trash2, Plus } from "lucide-react";
+import { Star, Trash2, Plus, Wifi, Loader2, Unplug } from "lucide-react";
 import { PrinterThumb } from "@/components/PrinterThumb";
-import type { Printer } from "@/lib/types";
-import { PRINTER_PRESETS } from "@/lib/printerPresets";
+import { PrinterStatusCard } from "@/components/PrinterStatusCard";
+import type { SafePrinter } from "@/lib/printers";
+import { PRINTER_PRESETS, supportsMonitoring, monitoringConnType } from "@/lib/printerPresets";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -30,10 +38,16 @@ const EMPTY = {
 };
 
 export default function StampantiPage() {
-  const [printers, setPrinters] = useState<Printer[]>([]);
+  const [printers, setPrinters] = useState<SafePrinter[]>([]);
   const [defaultId, setDefaultId] = useState<number | null>(null);
   const [form, setForm] = useState({ ...EMPTY });
   const [saving, setSaving] = useState(false);
+
+  // Collegamento in lettura (LAN).
+  const [connTarget, setConnTarget] = useState<SafePrinter | null>(null);
+  const [connForm, setConnForm] = useState({ host: "", serial: "", code: "" });
+  const [testing, setTesting] = useState(false);
+  const [savingConn, setSavingConn] = useState(false);
 
   const load = useCallback(async () => {
     const [p, s] = await Promise.all([
@@ -113,6 +127,114 @@ export default function StampantiPage() {
     load();
   }
 
+  function openConnect(p: SafePrinter) {
+    setConnForm({ host: p.conn_host ?? "", serial: p.conn_serial ?? "", code: "" });
+    setConnTarget(p);
+  }
+
+  async function testConn() {
+    if (!connTarget) return;
+    const connType = monitoringConnType(connTarget.brand);
+    if (!connType) return;
+    if (!connForm.host.trim() || !connForm.serial.trim() || !connForm.code.trim()) {
+      return toast.error("Inserisci IP, seriale e access code per la prova.");
+    }
+    setTesting(true);
+    try {
+      const res = await fetch("/api/printers/test-connection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conn_type: connType,
+          conn_host: connForm.host.trim(),
+          conn_serial: connForm.serial.trim(),
+          conn_access_code: connForm.code,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) toast.success("Connessione riuscita: stampante raggiunta.");
+      else toast.error(data.error ?? "Connessione non riuscita.");
+    } catch {
+      toast.error("Errore di rete durante la prova.");
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  async function saveConn() {
+    if (!connTarget) return;
+    const connType = monitoringConnType(connTarget.brand);
+    if (!connType) return;
+    if (!connForm.host.trim() || !connForm.serial.trim()) {
+      return toast.error("IP e seriale sono obbligatori.");
+    }
+    // L'access code è già salvato (segreto non rimandato al client): serve inserirlo
+    // solo la prima volta o per cambiarlo.
+    if (!connTarget.conn_configured && !connForm.code.trim()) {
+      return toast.error("Inserisci l'access code LAN della stampante.");
+    }
+    setSavingConn(true);
+    try {
+      const body: Record<string, unknown> = {
+        id: connTarget.id,
+        name: connTarget.name,
+        brand: connTarget.brand,
+        model: connTarget.model,
+        build_volume: connTarget.build_volume,
+        nozzle_diameter: connTarget.nozzle_diameter,
+        tech: connTarget.tech,
+        notes: connTarget.notes,
+        conn_type: connType,
+        conn_host: connForm.host.trim(),
+        conn_serial: connForm.serial.trim(),
+      };
+      // Invia l'access code solo se l'utente ne ha digitato uno nuovo.
+      if (connForm.code.trim()) body.conn_access_code = connForm.code;
+      const res = await fetch("/api/printers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error("Salvataggio non riuscito");
+      toast.success("Stampante collegata in lettura.");
+      setConnTarget(null);
+      load();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSavingConn(false);
+    }
+  }
+
+  async function disconnect(p: SafePrinter) {
+    setSavingConn(true);
+    try {
+      await fetch("/api/printers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: p.id,
+          name: p.name,
+          brand: p.brand,
+          model: p.model,
+          build_volume: p.build_volume,
+          nozzle_diameter: p.nozzle_diameter,
+          tech: p.tech,
+          notes: p.notes,
+          conn_type: null,
+          conn_host: null,
+          conn_serial: null,
+          conn_access_code: null,
+        }),
+      });
+      toast.success("Collegamento rimosso.");
+      setConnTarget(null);
+      load();
+    } finally {
+      setSavingConn(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -133,11 +255,18 @@ export default function StampantiPage() {
                   <PrinterThumb brand={p.brand} model={p.model} size="sm" />
                   <CardTitle className="text-sm">{p.name}</CardTitle>
                 </div>
-                {isDefault && (
-                  <Badge variant="secondary" className="gap-1 text-primary">
-                    <Star className="h-3 w-3 fill-current" /> Predefinita
-                  </Badge>
-                )}
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  {isDefault && (
+                    <Badge variant="secondary" className="gap-1 text-primary">
+                      <Star className="h-3 w-3 fill-current" /> Predefinita
+                    </Badge>
+                  )}
+                  {p.conn_configured && (
+                    <Badge variant="secondary" className="gap-1 text-emerald-600 dark:text-emerald-400">
+                      <Wifi className="h-3 w-3" /> Collegata
+                    </Badge>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="space-y-2">
                 <div className="text-xs text-muted-foreground">
@@ -145,16 +274,22 @@ export default function StampantiPage() {
                     .filter(Boolean)
                     .join(" · ") || "—"}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {!isDefault && (
                     <Button size="sm" variant="outline" onClick={() => setDefault(p.id)}>
                       <Star className="h-3.5 w-3.5" /> Predefinita
+                    </Button>
+                  )}
+                  {supportsMonitoring(p.brand) && (
+                    <Button size="sm" variant="outline" onClick={() => openConnect(p)}>
+                      <Wifi className="h-3.5 w-3.5" /> {p.conn_configured ? "Collegamento" : "Collega"}
                     </Button>
                   )}
                   <Button size="sm" variant="ghost" onClick={() => remove(p.id)}>
                     <Trash2 className="h-3.5 w-3.5" /> Elimina
                   </Button>
                 </div>
+                {p.conn_configured && <PrinterStatusCard printerId={p.id} title="Stato in tempo reale" />}
               </CardContent>
             </Card>
           );
@@ -228,6 +363,61 @@ export default function StampantiPage() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Collegamento in lettura (LAN) */}
+      <Dialog open={connTarget != null} onOpenChange={(o) => !o && setConnTarget(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base">Collega in lettura — {connTarget?.name}</DialogTitle>
+            <DialogDescription>
+              Lettura via rete locale (LAN). Sulla stampante attiva la modalità LAN e recupera
+              access code, IP e seriale da Impostazioni → Rete.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Field label="Indirizzo IP">
+              <Input
+                value={connForm.host}
+                onChange={(e) => setConnForm({ ...connForm, host: e.target.value })}
+                placeholder="192.168.1.50"
+              />
+            </Field>
+            <Field label="Numero di serie">
+              <Input
+                value={connForm.serial}
+                onChange={(e) => setConnForm({ ...connForm, serial: e.target.value })}
+                placeholder="01P00A000000000"
+              />
+            </Field>
+            <Field label={connTarget?.conn_configured ? "Access code (lascia vuoto per non cambiarlo)" : "Access code LAN"}>
+              <Input
+                type="password"
+                value={connForm.code}
+                onChange={(e) => setConnForm({ ...connForm, code: e.target.value })}
+                placeholder="8 cifre"
+              />
+            </Field>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button variant="outline" onClick={testConn} disabled={testing || savingConn}>
+                {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wifi className="h-4 w-4" />}
+                Prova connessione
+              </Button>
+              <Button onClick={saveConn} disabled={savingConn || testing}>
+                {savingConn ? "Salvataggio…" : "Salva collegamento"}
+              </Button>
+              {connTarget?.conn_configured && (
+                <Button
+                  variant="ghost"
+                  onClick={() => connTarget && disconnect(connTarget)}
+                  disabled={savingConn || testing}
+                >
+                  <Unplug className="h-4 w-4" /> Scollega
+                </Button>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

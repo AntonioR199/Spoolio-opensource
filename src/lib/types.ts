@@ -99,6 +99,11 @@ export interface Printer {
   nozzle_diameter: number | null;
   tech: string | null;
   notes: string | null;
+  /** Integrazione in lettura (LAN). null = non collegata. */
+  conn_type: string | null; // es. 'bambu-lan'
+  conn_host: string | null;
+  conn_serial: string | null;
+  conn_access_code: string | null;
   created_at: string;
 }
 

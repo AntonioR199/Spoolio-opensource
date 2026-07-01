@@ -19,6 +19,7 @@ import { getDefaultPrinter } from "@/lib/printers";
 import { getPaletteCoverage } from "@/lib/palette";
 import { typeLabel } from "@/lib/labels";
 import { PrinterThumb } from "@/components/PrinterThumb";
+import { PrinterStatusCard } from "@/components/PrinterStatusCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -103,6 +104,9 @@ export default async function Dashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Stato in tempo reale della stampante collegata */}
+      {printer?.conn_configured && <PrinterStatusCard printerId={printer.id} title={`Stato — ${printer.name}`} />}
 
       {/* Statistiche */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

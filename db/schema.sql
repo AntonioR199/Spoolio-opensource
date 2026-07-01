@@ -35,8 +35,19 @@ create table if not exists printer (
   nozzle_diameter  double precision,
   tech             text,
   notes            text,
+  -- Integrazione in lettura (LAN). NULL = stampante non collegata.
+  conn_type        text,            -- es. 'bambu-lan'
+  conn_host        text,            -- IP della stampante in LAN
+  conn_serial      text,            -- seriale (per i topic device/{serial}/report|request)
+  conn_access_code text,            -- access code LAN (protetto da RLS per-utente)
   created_at       timestamptz not null default now()
 );
+
+-- Per i DB già esistenti: aggiunge le colonne di connessione se mancanti.
+alter table printer add column if not exists conn_type        text;
+alter table printer add column if not exists conn_host        text;
+alter table printer add column if not exists conn_serial      text;
+alter table printer add column if not exists conn_access_code text;
 
 create table if not exists invoice (
   id            bigint generated always as identity primary key,

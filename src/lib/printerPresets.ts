@@ -64,3 +64,16 @@ export function printerImage(brand: string | null, model: string | null): string
 export const PRINTER_IMAGE_FILES = PRINTER_PRESETS.map(
   (p) => `${printerSlug(p.brand, p.model)}.webp`
 );
+
+/** Tipo di connessione in lettura supportato per un marchio, o null se nessuno.
+ *  In v1 solo Bambu Lab (MQTT LAN). Estendibile: Prusa/Creality/… → altri adapter. */
+export function monitoringConnType(brand: string | null): string | null {
+  if (!brand) return null;
+  if (brand.toLowerCase() === "bambu lab") return "bambu-lan";
+  return null;
+}
+
+/** True se il modello supporta l'integrazione in lettura. */
+export function supportsMonitoring(brand: string | null): boolean {
+  return monitoringConnType(brand) !== null;
+}

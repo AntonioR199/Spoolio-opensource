@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { listPrinters, upsertPrinter, deletePrinter } from "@/lib/printers";
+import { closePrinterConnection } from "@/lib/printer-monitor/connectionManager";
 import { apiError } from "@/lib/apiError";
 
 export const runtime = "nodejs";
@@ -19,6 +20,11 @@ const schema = z.object({
   nozzle_diameter: z.number().nullable(),
   tech: z.string().nullable(),
   notes: z.string().nullable(),
+  // Connessione in lettura (opzionale). Assente = non modificata.
+  conn_type: z.string().nullable().optional(),
+  conn_host: z.string().nullable().optional(),
+  conn_serial: z.string().nullable().optional(),
+  conn_access_code: z.string().nullable().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -36,6 +42,7 @@ export async function DELETE(req: NextRequest) {
   try {
     const id = Number(new URL(req.url).searchParams.get("id"));
     if (!id) return NextResponse.json({ error: "id mancante." }, { status: 400 });
+    closePrinterConnection(id);
     await deletePrinter(id);
     return NextResponse.json({ ok: true });
   } catch (e) {

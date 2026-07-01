@@ -40,7 +40,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   // better-sqlite3 è un modulo nativo: va lasciato esterno al bundle server.
-  serverExternalPackages: ["better-sqlite3"],
+  // mqtt usa i moduli Node net/tls per parlare con le stampanti in LAN: fuori dal bundle.
+  serverExternalPackages: ["better-sqlite3", "mqtt"],
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

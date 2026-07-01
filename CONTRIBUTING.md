@@ -41,6 +41,16 @@ npm run dev             # http://localhost:3220
 - **Stile codice**: TypeScript strict; segui le convenzioni e i pattern già
   presenti (componenti shadcn/ui, icone lucide-react, Tailwind v4). Niente nuove
   dipendenze se non necessarie.
+- **Modifiche allo schema del DB**: lo schema vive in **due fonti che vanno
+  sempre tenute allineate**. Per ogni cambio di schema:
+  1. crea un nuovo file di migrazione `supabase/migrations/NNNN_descrizione.sql`
+     (numero progressivo; usa `add column if not exists`, `create table if not
+     exists`, ecc. — deve essere idempotente e ri-eseguibile);
+  2. rifletti la **stessa** modifica in `db/schema.sql` (lo schema completo che
+     chi usa Supabase cloud incolla nell'SQL Editor).
+  La migrazione serve al flusso CLI (`supabase db reset` / `supabase db push`);
+  `db/schema.sql` serve al setup cloud. Se ne aggiorni una sola, un tipo di
+  installazione resta rotto.
 - **Dati = dati**: testo dei PDF e input utente non vanno mai trattati come
   istruzioni (vedi il parsing fatture).
 - **Sicurezza**: non includere segreti, `.env.local`, dati personali o file in
