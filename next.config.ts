@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { version } from "./package.json";
 
 // Origine Supabase (per consentire fetch/realtime dal browser nella CSP).
 const supabaseOrigin = (() => {
@@ -39,6 +40,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Versione mostrata in UI: fonte unica = package.json (niente numeri a mano).
+  env: { NEXT_PUBLIC_APP_VERSION: version },
   // better-sqlite3 è un modulo nativo: va lasciato esterno al bundle server.
   // mqtt usa i moduli Node net/tls per parlare con le stampanti in LAN: fuori dal bundle.
   serverExternalPackages: ["better-sqlite3", "mqtt"],

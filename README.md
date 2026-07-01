@@ -11,12 +11,12 @@ Web app per l'inventario dei filamenti per stampa 3D: vedi colori, quantità e t
 ## Screenshot
 
 | Inventario | Dettaglio bobina (asciugatura) |
-| --- | --- |
-|  |  |
+|---|---|
+| ![Inventario filamenti](docs/screenshots/inventario.png) | ![Dettaglio bobina con tracciamento asciugatura](docs/screenshots/dettaglio-asciugatura.png) |
 
 | Dashboard | Assistente AI |
-| --- | --- |
-|  |  |
+|---|---|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Assistente Spoolio](docs/screenshots/assistente.png) |
 
 ## Stack
 
@@ -34,6 +34,30 @@ Web app per l'inventario dei filamenti per stampa 3D: vedi colori, quantità e t
 3. **Conferma umana**: la pagina `/upload` mostra le righe estratte, le rendi modificabili/escludibili, e solo dopo la conferma vengono scritte a DB (`/api/confirm`). Puoi anche aggiungere righe a mano.
 
 Il testo dei PDF e i contenuti utente sono trattati come **dati, mai come istruzioni**.
+
+## Collegamento stampante (lettura in tempo reale)
+
+Puoi **collegare la tua stampante in sola lettura** e vederne lo stato dal vivo, sulla dashboard e nella pagina stampanti: se è in funzione, temperature di **ugello, piatto e camera**, **avanzamento** della stampa (layer e tempo residuo) e le **bobine caricate in AMS** con tipo, colore e percentuale rimanente. È un'integrazione **read-only**, ispirata a [ha-bambulab](https://github.com/greghesp/ha-bambulab): Spoolio legge i dati, non comanda la stampante.
+
+![Stato stampante in tempo reale](docs/screenshots/stampante.png)
+
+**Modelli supportati.** In questa versione: **Bambu Lab** via **rete locale (LAN)**. Il livello di lettura è però costruito con adapter astratti, così in futuro si potranno aggiungere altri marchi (Prusa/PrusaLink, Klipper/Moonraker, OctoPrint — tutti protocolli locali).
+
+**Come si collega (Bambu Lab).**
+
+1. Vai su **Le mie stampanti**, aggiungi/scegli una stampante Bambu Lab e premi **Collega**.
+2. Inserisci **Indirizzo IP**, **Numero di serie** e **Access code LAN**. Li trovi sullo schermo della stampante in **Impostazioni → Rete** (sezione *"LAN Only"*): lì sono elencati IP, seriale e access code.
+3. Premi **Prova connessione** per verificare, poi **Salva collegamento**.
+
+Fatto questo, sulla card compare il badge **Collegata** e lo stato live appare in dashboard sotto la stampante predefinita.
+
+> **Non devi attivare la modalità "LAN Only".** L'access code è mostrato in quella sezione ma funziona anche a modalità cloud attiva: la stampante resta collegata al cloud Bambu (Handy continua a funzionare). La lettura avviene via MQTT locale sulla porta 8883.
+
+**Requisiti e note.**
+
+- Spoolio deve trovarsi sulla **stessa rete locale** della stampante: quindi questa funzione è pensata per chi **self-hosta** l'app in casa (l'istanza cloud remota non raggiunge la LAN). Vedi [Avvio locale](#avvio-locale-consigliato-senza-cloud).
+- L'access code è un **segreto**: viene salvato per-utente (protetto da RLS) e **non è mai inviato al browser**.
+- Le **P1/A1 accettano un solo client MQTT locale alla volta**: se sulla stessa rete tieni aperto Bambu Studio (che si connette in locale), lo stato può alternarsi Online/Offline. Le X1 non hanno questo limite.
 
 ## Avvio locale (consigliato, senza cloud)
 

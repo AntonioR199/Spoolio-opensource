@@ -410,7 +410,7 @@ export default function ImpostazioniPage() {
           <CardTitle className="text-base">Info</CardTitle>
         </CardHeader>
         <CardContent className="space-y-1 text-sm text-muted-foreground">
-          <p>Spoolio · v1.1.0</p>
+          <p>Spoolio · v{process.env.NEXT_PUBLIC_APP_VERSION}</p>
           <p>
             Un progetto{" "}
             <a
