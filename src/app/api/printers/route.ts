@@ -25,6 +25,8 @@ const schema = z.object({
   conn_host: z.string().nullable().optional(),
   conn_serial: z.string().nullable().optional(),
   conn_access_code: z.string().nullable().optional(),
+  // Parametri non segreti specifici del protocollo (es. { port: 7125 }).
+  conn_config: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
 export async function POST(req: NextRequest) {

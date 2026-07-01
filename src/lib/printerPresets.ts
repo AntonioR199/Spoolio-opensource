@@ -65,15 +65,62 @@ export const PRINTER_IMAGE_FILES = PRINTER_PRESETS.map(
   (p) => `${printerSlug(p.brand, p.model)}.webp`
 );
 
-/** Tipo di connessione in lettura supportato per un marchio, o null se nessuno.
- *  In v1 solo Bambu Lab (MQTT LAN). Estendibile: Prusa/Creality/… → altri adapter. */
-export function monitoringConnType(brand: string | null): string | null {
-  if (!brand) return null;
-  if (brand.toLowerCase() === "bambu lab") return "bambu-lan";
-  return null;
+/** Metodo di connessione in lettura (LAN), indipendente dalla marca.
+ *  Ogni metodo corrisponde a un adapter registrato (stesso `id` = `conn_type`). */
+export interface ConnMethod {
+  id: string; // = conn_type dell'adapter
+  label: string;
+  /** Numero di serie richiesto (solo Bambu, per i topic MQTT). */
+  needsSerial: boolean;
+  /** Porta configurabile (Moonraker, default 7125). */
+  needsPort: boolean;
+  defaultPort?: number;
+  /** Etichetta del campo segreto, o null se il protocollo non richiede segreti. */
+  secretLabel: string | null;
+  /** Testo d'aiuto mostrato nel dialog. */
+  hint: string;
 }
 
-/** True se il modello supporta l'integrazione in lettura. */
-export function supportsMonitoring(brand: string | null): boolean {
-  return monitoringConnType(brand) !== null;
+export const CONN_METHODS: ConnMethod[] = [
+  {
+    id: "bambu-lan",
+    label: "Bambu Lab (LAN · MQTT)",
+    needsSerial: true,
+    needsPort: false,
+    secretLabel: "Access code LAN",
+    hint: "Sulla stampante attiva la modalità LAN e recupera access code, IP e seriale da Impostazioni → Rete.",
+  },
+  {
+    id: "prusalink",
+    label: "Prusa (PrusaLink)",
+    needsSerial: false,
+    needsPort: false,
+    secretLabel: "API key (PrusaLink)",
+    hint: "Recupera l'API key da Impostazioni → Rete → PrusaLink sulla stampante e inserisci il suo IP in LAN.",
+  },
+  {
+    id: "moonraker",
+    label: "Klipper (Moonraker)",
+    needsSerial: false,
+    needsPort: true,
+    defaultPort: 7125,
+    secretLabel: "API key (opzionale)",
+    hint: "Per stampanti Klipper (Creality K1/K2, Elegoo Centauri, Voron…). In LAN di norma non serve alcuna chiave.",
+  },
+];
+
+export function connMethod(id: string | null | undefined): ConnMethod | undefined {
+  if (!id) return undefined;
+  return CONN_METHODS.find((m) => m.id === id);
+}
+
+/** Metodo suggerito in base alla marca (l'utente può comunque cambiarlo). */
+export function defaultConnMethod(brand: string | null): string {
+  const b = (brand ?? "").toLowerCase();
+  if (b.includes("bambu")) return "bambu-lan";
+  if (b.includes("prusa")) return "prusalink";
+  if (b.includes("creality") || b.includes("elegoo") || b.includes("voron") || b.includes("qidi")) {
+    return "moonraker";
+  }
+  return "bambu-lan";
 }

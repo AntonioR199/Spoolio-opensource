@@ -15,7 +15,15 @@ export function Logo({ className }: { className?: string }) {
           src="/spoolio-logo.png"
           alt="Spoolio"
           onError={() => setErr(true)}
-          className="w-full h-full object-contain scale-[1.35]"
+          className="w-full h-full object-contain scale-[1.35] dark:hidden"
+        />
+        {/* Versione chiara per la dark mode: struttura navy schiarita, filamento azzurro invariato */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/spoolio-logo-dark.png"
+          alt="Spoolio"
+          onError={() => setErr(true)}
+          className="hidden w-full h-full object-contain scale-[1.35] dark:block"
         />
       </span>
     );

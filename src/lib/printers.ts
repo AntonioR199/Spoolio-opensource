@@ -41,6 +41,7 @@ export interface PrinterInput {
   conn_host?: string | null;
   conn_serial?: string | null;
   conn_access_code?: string | null;
+  conn_config?: Record<string, unknown> | null;
 }
 
 export async function upsertPrinter(p: PrinterInput): Promise<number> {
@@ -59,6 +60,7 @@ export async function upsertPrinter(p: PrinterInput): Promise<number> {
   if (p.conn_host !== undefined) fields.conn_host = p.conn_host;
   if (p.conn_serial !== undefined) fields.conn_serial = p.conn_serial;
   if (p.conn_access_code !== undefined) fields.conn_access_code = p.conn_access_code;
+  if (p.conn_config !== undefined) fields.conn_config = p.conn_config;
   if (p.id) {
     const { error } = await supabase.from("printer").update(fields).eq("id", p.id);
     if (error) throw new Error(error.message);

@@ -61,7 +61,14 @@ function Brand() {
           alt="Spoolio"
           width={80}
           height={20}
-          className="h-5 w-auto object-contain"
+          className="h-5 w-auto object-contain dark:hidden"
+        />
+        <Image
+          src="/spoolio-logo-scritta-dark.png"
+          alt="Spoolio"
+          width={80}
+          height={20}
+          className="hidden h-5 w-auto object-contain dark:block"
         />
         <span className="text-[11px] text-muted-foreground">Il tuo magazzino 3D</span>
       </span>

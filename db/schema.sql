@@ -36,10 +36,11 @@ create table if not exists printer (
   tech             text,
   notes            text,
   -- Integrazione in lettura (LAN). NULL = stampante non collegata.
-  conn_type        text,            -- es. 'bambu-lan'
+  conn_type        text,            -- protocollo: 'bambu-lan' | 'prusalink' | 'moonraker'
   conn_host        text,            -- IP della stampante in LAN
-  conn_serial      text,            -- seriale (per i topic device/{serial}/report|request)
-  conn_access_code text,            -- access code LAN (protetto da RLS per-utente)
+  conn_serial      text,            -- seriale Bambu (topic device/{serial}/report|request)
+  conn_access_code text,            -- segreto: access code Bambu / API key Prusa (protetto da RLS)
+  conn_config      jsonb,           -- parametri non segreti per protocollo (es. porta Moonraker)
   created_at       timestamptz not null default now()
 );
 
@@ -48,6 +49,7 @@ alter table printer add column if not exists conn_type        text;
 alter table printer add column if not exists conn_host        text;
 alter table printer add column if not exists conn_serial      text;
 alter table printer add column if not exists conn_access_code text;
+alter table printer add column if not exists conn_config      jsonb;
 
 create table if not exists invoice (
   id            bigint generated always as identity primary key,

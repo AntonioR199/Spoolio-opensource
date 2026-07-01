@@ -11,6 +11,8 @@ import { getAdapter, type LiveConnection } from "./adapter";
 import { offlineStatus, type PrinterConnection, type PrinterStatus } from "./types";
 // Registra gli adapter disponibili (side-effect import).
 import "./bambu/lan";
+import "./prusa/prusalink";
+import "./moonraker/moonraker";
 
 const IDLE_TIMEOUT_MS = 2 * 60_000; // chiudi dopo 2 min senza richieste
 const SWEEP_INTERVAL_MS = 30_000;
@@ -27,7 +29,13 @@ const g = globalThis as unknown as { __spoolioPrinterConns?: Store };
 const store: Store = (g.__spoolioPrinterConns ??= { entries: new Map(), sweeper: null });
 
 function connKey(c: PrinterConnection): string {
-  return [c.conn_type, c.conn_host, c.conn_serial, c.conn_access_code].join("|");
+  return [
+    c.conn_type,
+    c.conn_host,
+    c.conn_serial,
+    c.conn_access_code,
+    JSON.stringify(c.conn_config ?? null),
+  ].join("|");
 }
 
 function ensureSweeper() {
@@ -49,9 +57,10 @@ function ensureSweeper() {
   store.sweeper.unref?.();
 }
 
-/** True se la stampante ha una connessione configurata e supportata. */
+/** True se la stampante ha una connessione configurata e supportata.
+ *  I requisiti specifici del protocollo (es. seriale per Bambu) li valida l'adapter. */
 export function isConnectable(c: PrinterConnection): boolean {
-  return Boolean(c.conn_type && c.conn_host && c.conn_serial && getAdapter(c.conn_type));
+  return Boolean(c.conn_type && c.conn_host && getAdapter(c.conn_type));
 }
 
 /** Stato corrente della stampante (apre/riusa la connessione viva). */

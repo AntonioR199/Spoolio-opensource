@@ -24,6 +24,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       conn_host: printer.conn_host,
       conn_serial: printer.conn_serial,
       conn_access_code: printer.conn_access_code,
+      conn_config: printer.conn_config,
     });
     return NextResponse.json({ status, configured: true });
   } catch (e) {

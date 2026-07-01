@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Mail, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -93,8 +94,25 @@ export default function LoginPage() {
 
       <Card className="relative z-10 w-full max-w-sm shadow-xl backdrop-blur-sm">
         <CardHeader className="items-center text-center">
-          <Logo className="h-14 w-14" />
-          <CardTitle className="text-xl">Spoolio</CardTitle>
+          <CardTitle className="flex items-center justify-center gap-2.5">
+            <Logo className="h-12 w-12 shadow-sm" />
+            <Image
+              src="/spoolio-logo-scritta.png"
+              alt="Spoolio"
+              width={155}
+              height={40}
+              className="h-7 w-auto object-contain dark:hidden"
+              priority
+            />
+            <Image
+              src="/spoolio-logo-scritta-dark.png"
+              alt="Spoolio"
+              width={155}
+              height={40}
+              className="hidden h-7 w-auto object-contain dark:block"
+              priority
+            />
+          </CardTitle>
           <CardDescription>Accedi al tuo magazzino filamenti 3D.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

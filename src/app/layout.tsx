@@ -14,7 +14,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="it" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    <html
+      lang="it"
+      suppressHydrationWarning
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+    >
       <head>
         <script
           // Applica il tema salvato prima del paint per evitare il flash.

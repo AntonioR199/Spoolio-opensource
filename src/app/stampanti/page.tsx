@@ -6,7 +6,7 @@ import { Star, Trash2, Plus, Wifi, Loader2, Unplug } from "lucide-react";
 import { PrinterThumb } from "@/components/PrinterThumb";
 import { PrinterStatusCard } from "@/components/PrinterStatusCard";
 import type { SafePrinter } from "@/lib/printers";
-import { PRINTER_PRESETS, supportsMonitoring, monitoringConnType } from "@/lib/printerPresets";
+import { PRINTER_PRESETS, CONN_METHODS, connMethod, defaultConnMethod } from "@/lib/printerPresets";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,7 +45,7 @@ export default function StampantiPage() {
 
   // Collegamento in lettura (LAN).
   const [connTarget, setConnTarget] = useState<SafePrinter | null>(null);
-  const [connForm, setConnForm] = useState({ host: "", serial: "", code: "" });
+  const [connForm, setConnForm] = useState({ method: "bambu-lan", host: "", serial: "", port: "", code: "" });
   const [testing, setTesting] = useState(false);
   const [savingConn, setSavingConn] = useState(false);
 
@@ -128,28 +128,58 @@ export default function StampantiPage() {
   }
 
   function openConnect(p: SafePrinter) {
-    setConnForm({ host: p.conn_host ?? "", serial: p.conn_serial ?? "", code: "" });
+    const method = p.conn_type ?? defaultConnMethod(p.brand);
+    const port = (p.conn_config?.port as number | string | undefined) ?? "";
+    setConnForm({
+      method,
+      host: p.conn_host ?? "",
+      serial: p.conn_serial ?? "",
+      port: port === "" ? "" : String(port),
+      code: "",
+    });
     setConnTarget(p);
+  }
+
+  /** Payload di connessione comune a test e salvataggio, secondo il metodo scelto. */
+  function buildConnPayload(): Record<string, unknown> | null {
+    const method = connMethod(connForm.method);
+    if (!method) return null;
+    if (!connForm.host.trim()) {
+      toast.error("L'indirizzo IP è obbligatorio.");
+      return null;
+    }
+    if (method.needsSerial && !connForm.serial.trim()) {
+      toast.error("Il numero di serie è obbligatorio per questo metodo.");
+      return null;
+    }
+    const payload: Record<string, unknown> = {
+      conn_type: method.id,
+      conn_host: connForm.host.trim(),
+      conn_serial: method.needsSerial ? connForm.serial.trim() : null,
+      conn_config: method.needsPort
+        ? { port: Number(connForm.port) || method.defaultPort }
+        : null,
+    };
+    if (connForm.code.trim()) payload.conn_access_code = connForm.code;
+    return payload;
   }
 
   async function testConn() {
     if (!connTarget) return;
-    const connType = monitoringConnType(connTarget.brand);
-    if (!connType) return;
-    if (!connForm.host.trim() || !connForm.serial.trim() || !connForm.code.trim()) {
-      return toast.error("Inserisci IP, seriale e access code per la prova.");
+    const method = connMethod(connForm.method);
+    if (!method) return;
+    const payload = buildConnPayload();
+    if (!payload) return;
+    // Per la prova il segreto (se richiesto) va inserito ora: non è persistito nel form.
+    if (method.secretLabel && !connForm.code.trim()) {
+      return toast.error(`Inserisci ${method.secretLabel.toLowerCase()} per la prova.`);
     }
     setTesting(true);
     try {
       const res = await fetch("/api/printers/test-connection", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          conn_type: connType,
-          conn_host: connForm.host.trim(),
-          conn_serial: connForm.serial.trim(),
-          conn_access_code: connForm.code,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (data.ok) toast.success("Connessione riuscita: stampante raggiunta.");
@@ -163,15 +193,15 @@ export default function StampantiPage() {
 
   async function saveConn() {
     if (!connTarget) return;
-    const connType = monitoringConnType(connTarget.brand);
-    if (!connType) return;
-    if (!connForm.host.trim() || !connForm.serial.trim()) {
-      return toast.error("IP e seriale sono obbligatori.");
-    }
-    // L'access code è già salvato (segreto non rimandato al client): serve inserirlo
-    // solo la prima volta o per cambiarlo.
-    if (!connTarget.conn_configured && !connForm.code.trim()) {
-      return toast.error("Inserisci l'access code LAN della stampante.");
+    const method = connMethod(connForm.method);
+    if (!method) return;
+    const payload = buildConnPayload();
+    if (!payload) return;
+    // Il segreto è già salvato (non rimandato al client): serve inserirlo solo la
+    // prima volta o per cambiarlo. Se il metodo cambia, richiedilo di nuovo.
+    const methodChanged = connTarget.conn_type !== method.id;
+    if (method.secretLabel && (!connTarget.conn_configured || methodChanged) && !connForm.code.trim()) {
+      return toast.error(`Inserisci ${method.secretLabel.toLowerCase()}.`);
     }
     setSavingConn(true);
     try {
@@ -184,12 +214,8 @@ export default function StampantiPage() {
         nozzle_diameter: connTarget.nozzle_diameter,
         tech: connTarget.tech,
         notes: connTarget.notes,
-        conn_type: connType,
-        conn_host: connForm.host.trim(),
-        conn_serial: connForm.serial.trim(),
+        ...payload,
       };
-      // Invia l'access code solo se l'utente ne ha digitato uno nuovo.
-      if (connForm.code.trim()) body.conn_access_code = connForm.code;
       const res = await fetch("/api/printers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -225,6 +251,7 @@ export default function StampantiPage() {
           conn_host: null,
           conn_serial: null,
           conn_access_code: null,
+          conn_config: null,
         }),
       });
       toast.success("Collegamento rimosso.");
@@ -280,11 +307,9 @@ export default function StampantiPage() {
                       <Star className="h-3.5 w-3.5" /> Predefinita
                     </Button>
                   )}
-                  {supportsMonitoring(p.brand) && (
-                    <Button size="sm" variant="outline" onClick={() => openConnect(p)}>
-                      <Wifi className="h-3.5 w-3.5" /> {p.conn_configured ? "Collegamento" : "Collega"}
-                    </Button>
-                  )}
+                  <Button size="sm" variant="outline" onClick={() => openConnect(p)}>
+                    <Wifi className="h-3.5 w-3.5" /> {p.conn_configured ? "Collegamento" : "Collega"}
+                  </Button>
                   <Button size="sm" variant="ghost" onClick={() => remove(p.id)}>
                     <Trash2 className="h-3.5 w-3.5" /> Elimina
                   </Button>
@@ -370,11 +395,28 @@ export default function StampantiPage() {
           <DialogHeader>
             <DialogTitle className="text-base">Collega in lettura — {connTarget?.name}</DialogTitle>
             <DialogDescription>
-              Lettura via rete locale (LAN). Sulla stampante attiva la modalità LAN e recupera
-              access code, IP e seriale da Impostazioni → Rete.
+              {connMethod(connForm.method)?.hint ??
+                "Lettura via rete locale (LAN): scegli il metodo di connessione della stampante."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
+            <Field label="Metodo di connessione">
+              <Select
+                value={connForm.method}
+                onValueChange={(v) => v != null && setConnForm({ ...connForm, method: String(v) })}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CONN_METHODS.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
             <Field label="Indirizzo IP">
               <Input
                 value={connForm.host}
@@ -382,21 +424,39 @@ export default function StampantiPage() {
                 placeholder="192.168.1.50"
               />
             </Field>
-            <Field label="Numero di serie">
-              <Input
-                value={connForm.serial}
-                onChange={(e) => setConnForm({ ...connForm, serial: e.target.value })}
-                placeholder="01P00A000000000"
-              />
-            </Field>
-            <Field label={connTarget?.conn_configured ? "Access code (lascia vuoto per non cambiarlo)" : "Access code LAN"}>
-              <Input
-                type="password"
-                value={connForm.code}
-                onChange={(e) => setConnForm({ ...connForm, code: e.target.value })}
-                placeholder="8 cifre"
-              />
-            </Field>
+            {connMethod(connForm.method)?.needsSerial && (
+              <Field label="Numero di serie">
+                <Input
+                  value={connForm.serial}
+                  onChange={(e) => setConnForm({ ...connForm, serial: e.target.value })}
+                  placeholder="01P00A000000000"
+                />
+              </Field>
+            )}
+            {connMethod(connForm.method)?.needsPort && (
+              <Field label="Porta">
+                <Input
+                  value={connForm.port}
+                  onChange={(e) => setConnForm({ ...connForm, port: e.target.value })}
+                  placeholder={String(connMethod(connForm.method)?.defaultPort ?? "")}
+                />
+              </Field>
+            )}
+            {connMethod(connForm.method)?.secretLabel && (
+              <Field
+                label={
+                  connTarget?.conn_configured
+                    ? `${connMethod(connForm.method)!.secretLabel} (lascia vuoto per non cambiarlo)`
+                    : connMethod(connForm.method)!.secretLabel!
+                }
+              >
+                <Input
+                  type="password"
+                  value={connForm.code}
+                  onChange={(e) => setConnForm({ ...connForm, code: e.target.value })}
+                />
+              </Field>
+            )}
             <div className="flex flex-wrap gap-2 pt-1">
               <Button variant="outline" onClick={testConn} disabled={testing || savingConn}>
                 {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wifi className="h-4 w-4" />}

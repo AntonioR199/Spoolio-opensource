@@ -7,11 +7,15 @@ import { apiError } from "@/lib/apiError";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Schema generico per protocollo: obbligatori solo tipo e host. Il seriale (Bambu)
+// e il segreto (access code / API key) dipendono dal metodo; Moonraker può non
+// avere auth. I requisiti specifici li valida l'adapter al momento della connessione.
 const schema = z.object({
   conn_type: z.string().min(1),
   conn_host: z.string().min(1),
-  conn_serial: z.string().min(1),
-  conn_access_code: z.string().min(1),
+  conn_serial: z.string().nullable().optional(),
+  conn_access_code: z.string().nullable().optional(),
+  conn_config: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
 // Verifica una connessione in lettura con i parametri forniti (prima del salvataggio).
@@ -25,14 +29,21 @@ export async function POST(req: NextRequest) {
     const adapter = getAdapter(parsed.data.conn_type);
     if (!adapter) return NextResponse.json({ error: "Tipo di connessione non supportato." }, { status: 400 });
 
-    const conn = await adapter.connect({ id: -1, ...parsed.data });
+    const conn = await adapter.connect({
+      id: -1,
+      conn_type: parsed.data.conn_type,
+      conn_host: parsed.data.conn_host,
+      conn_serial: parsed.data.conn_serial ?? null,
+      conn_access_code: parsed.data.conn_access_code ?? null,
+      conn_config: parsed.data.conn_config ?? null,
+    });
     const status = conn.getStatus();
     conn.close();
 
     if (!status.online) {
       return NextResponse.json({
         ok: false,
-        error: "Nessuna risposta dalla stampante. Verifica IP, seriale, access code e che la modalità LAN sia attiva.",
+        error: "Nessuna risposta dalla stampante. Verifica IP e credenziali, e che la stampante sia raggiungibile in LAN.",
       });
     }
     return NextResponse.json({ ok: true, state: status.state });

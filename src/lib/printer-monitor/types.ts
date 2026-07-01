@@ -56,6 +56,8 @@ export interface PrinterConnection {
   conn_host: string | null;
   conn_serial: string | null;
   conn_access_code: string | null;
+  /** Parametri non segreti specifici del protocollo (es. { port: 7125 }). */
+  conn_config?: Record<string, unknown> | null;
 }
 
 /** Stato "offline" di comodo quando non riusciamo a leggere la stampante. */

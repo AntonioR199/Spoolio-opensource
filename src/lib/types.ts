@@ -100,10 +100,12 @@ export interface Printer {
   tech: string | null;
   notes: string | null;
   /** Integrazione in lettura (LAN). null = non collegata. */
-  conn_type: string | null; // es. 'bambu-lan'
+  conn_type: string | null; // protocollo: 'bambu-lan' | 'prusalink' | 'moonraker'
   conn_host: string | null;
   conn_serial: string | null;
-  conn_access_code: string | null;
+  conn_access_code: string | null; // segreto: access code Bambu / API key Prusa
+  /** Parametri non segreti specifici del protocollo (es. { port: 7125 } per Moonraker). */
+  conn_config: Record<string, unknown> | null;
   created_at: string;
 }
 
