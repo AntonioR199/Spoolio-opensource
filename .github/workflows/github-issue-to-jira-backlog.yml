@@ -1,0 +1,99 @@
+name: GitHub issue → Jira backlog (Bug)
+
+# Quando apri una issue su GitHub, crea una card nel backlog del progetto SO
+# come tipo "Bug" e la porta nello stato "Bug" (colonna di triage).
+# La card nasce SENZA sprint => finisce nel backlog, pronta per il tuo planning.
+
+on:
+  issues:
+    types: [opened]
+
+# Privilegio minimo: al token automatico serve solo scrivere il commento sulla issue.
+permissions:
+  issues: write
+  contents: none
+
+# Evita run concorrenti sulla stessa issue
+concurrency:
+  group: gh-jira-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  create-jira-bug:
+    runs-on: ubuntu-latest
+    # OPZIONALE (anti-spam su repo pubblico): per accettare solo issue da te o dai
+    # collaboratori, togli il commento alla riga sotto. Lasciala commentata se vuoi
+    # che anche le segnalazioni della community finiscano nel backlog per la triage.
+    # if: contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association)
+    steps:
+      - name: Crea card Bug su Jira e portala in stato "Bug"
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}   # es. https://riccioantonio19.atlassian.net
+          JIRA_EMAIL:    ${{ secrets.JIRA_EMAIL }}       # es. riccio.antonio19@gmail.com
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}  # API token da id.atlassian.com
+          JIRA_PROJECT_KEY: "SO"
+          JIRA_ISSUE_TYPE: "Bug"
+          JIRA_TARGET_STATUS: "Bug"
+          GH_TITLE: ${{ github.event.issue.title }}
+          GH_NUMBER: ${{ github.event.issue.number }}
+          GH_URL: ${{ github.event.issue.html_url }}
+          GH_BODY: ${{ github.event.issue.body }}
+          GH_AUTHOR: ${{ github.event.issue.user.login }}
+        run: |
+          set -euo pipefail
+          AUTH=$(printf '%s:%s' "$JIRA_EMAIL" "$JIRA_API_TOKEN" | base64 | tr -d '\n')
+
+          # --- Dedup: esiste già una card che referenzia questa issue? (label gh-<num>) ---
+          JQL="project = ${JIRA_PROJECT_KEY} AND labels = \"gh-${GH_NUMBER}\""
+          EXISTING=$(curl -sS -G "${JIRA_BASE_URL}/rest/api/2/search" \
+            -H "Authorization: Basic ${AUTH}" \
+            -H "Accept: application/json" \
+            --data-urlencode "jql=${JQL}" \
+            --data-urlencode "maxResults=1" | jq -r '.total // 0')
+          if [ "${EXISTING}" != "0" ]; then
+            echo "Card già esistente per gh-${GH_NUMBER}, salto."
+            exit 0
+          fi
+
+          # --- Descrizione della card (plain text via REST v2) ---
+          DESC=$(printf 'Issue GitHub #%s aperta da @%s\n\nLink: %s\n\n---\n%s' \
+            "$GH_NUMBER" "$GH_AUTHOR" "$GH_URL" "${GH_BODY:-(nessuna descrizione)}")
+
+          # --- Payload di creazione (jq costruisce JSON già escapato) ---
+          PAYLOAD=$(jq -n \
+            --arg pk "$JIRA_PROJECT_KEY" \
+            --arg it "$JIRA_ISSUE_TYPE" \
+            --arg sum "[GH-#${GH_NUMBER}] ${GH_TITLE}" \
+            --arg desc "$DESC" \
+            --arg lbl "gh-${GH_NUMBER}" \
+            '{fields:{project:{key:$pk}, issuetype:{name:$it}, summary:$sum, description:$desc, labels:["github",$lbl]}}')
+
+          RESP=$(curl -sS -X POST "${JIRA_BASE_URL}/rest/api/2/issue" \
+            -H "Authorization: Basic ${AUTH}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD")
+          KEY=$(echo "$RESP" | jq -r '.key // empty')
+          if [ -z "$KEY" ]; then
+            echo "Creazione fallita: $RESP"; exit 1
+          fi
+          echo "Creata card ${KEY}"
+
+          # --- Transizione verso lo stato "Bug" (lookup per nome, robusto) ---
+          TID=$(curl -sS "${JIRA_BASE_URL}/rest/api/2/issue/${KEY}/transitions" \
+            -H "Authorization: Basic ${AUTH}" -H "Accept: application/json" \
+            | jq -r --arg s "$JIRA_TARGET_STATUS" '.transitions[] | select(.name==$s or .to.name==$s) | .id' | head -n1)
+          if [ -n "$TID" ]; then
+            curl -sS -X POST "${JIRA_BASE_URL}/rest/api/2/issue/${KEY}/transitions" \
+              -H "Authorization: Basic ${AUTH}" -H "Content-Type: application/json" \
+              -d "{\"transition\":{\"id\":\"${TID}\"}}"
+            echo "Spostata ${KEY} in stato ${JIRA_TARGET_STATUS}"
+          else
+            echo "ATTENZIONE: nessuna transizione '${JIRA_TARGET_STATUS}' trovata; card lasciata nello stato iniziale."
+          fi
+
+          # --- Commento di tracciabilità sulla issue GitHub ---
+          curl -sS -X POST \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/${GH_NUMBER}/comments" \
+            -d "$(jq -n --arg k "$KEY" --arg u "${JIRA_BASE_URL}/browse/" '{body:("🔗 Tracciata su Jira: " + $u + $k)}')" >/dev/null || true

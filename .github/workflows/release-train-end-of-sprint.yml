@@ -1,0 +1,137 @@
+name: Release train (fine sprint) → PR, merge, tag, Done
+
+# Bottone manuale: lo lanci TU quando chiudi lo sprint.
+# main è PROTETTO (solo PR), quindi questo workflow NON pusha su main:
+#   1. crea un branch di rilascio e ci mergia (squash) tutti i branch delle card in "To Release"
+#   2. risolve i conflitti di package.json alla versione più alta trovata
+#   3. apre UNA sola PR release/... -> main e la mergia via API (squash)
+#   4. tagga v<versione>, elimina i branch feature, sposta le card in Done
+# Nulla viene rilasciato prima che tu prema "Run". Con dry_run=true non tocca niente.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Prova a vuoto: nessuna PR, nessun merge, nessun tag, nessuna card spostata"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: release-train
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+      JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+      JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+      JIRA_PROJECT_KEY: "SO"
+      DONE_STATUS_ID: "10008"
+      DRY_RUN: ${{ inputs.dry_run }}
+      GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}   # PAT fine-grained dedicato (vedi SETUP.md)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+          token: ${{ secrets.RELEASE_TOKEN }}   # serve per push del branch di rilascio e per il merge
+
+      - name: Release train
+        run: |
+          set -euo pipefail
+          AUTH=$(printf '%s:%s' "$JIRA_EMAIL" "$JIRA_API_TOKEN" | base64 | tr -d '\n')
+
+          # 1) Card in "To Release"
+          JQL="project = ${JIRA_PROJECT_KEY} AND status = \"To Release\" ORDER BY key ASC"
+          RESP=$(curl -sS -G "${JIRA_BASE_URL}/rest/api/2/search" \
+            -H "Authorization: Basic ${AUTH}" -H "Accept: application/json" \
+            --data-urlencode "jql=${JQL}" --data-urlencode "fields=key" --data-urlencode "maxResults=100")
+          KEYS=$(echo "$RESP" | jq -r '.issues[].key')
+          if [ -z "$KEYS" ]; then echo "Nessuna card in 'To Release': niente da rilasciare."; exit 0; fi
+          echo "Card da rilasciare:"; echo "$KEYS"
+
+          git config user.name "release-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git fetch --all --tags --quiet
+
+          # 2) Versione target = max semver tra main e i branch delle card
+          TARGET=$(git show origin/main:package.json | jq -r '.version')
+          BRANCHES=""
+          for K in $KEYS; do
+            BR="features/${K}"
+            if ! git ls-remote --exit-code --heads origin "$BR" >/dev/null 2>&1; then
+              echo "::error::Branch $BR non trovato per la card $K. Interrompo: main NON toccato."; exit 1
+            fi
+            v=$(git show "origin/${BR}:package.json" | jq -r '.version // empty')
+            if [ -n "$v" ]; then
+              TARGET=$(printf '%s\n%s\n' "$TARGET" "$v" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+' | sort -V | tail -n1)
+            fi
+            BRANCHES="$BRANCHES $BR"
+          done
+          echo "Versione target del rilascio: ${TARGET}"
+
+          # 3) Branch di rilascio: merge (squash) di tutte le card
+          RELBR="release/sprint-$(date +%Y%m%d-%H%M%S)"
+          git checkout -B "$RELBR" origin/main
+          for BR in $BRANCHES; do
+            echo "== Merge (squash) $BR =="
+            if ! git merge --squash "origin/${BR}"; then
+              CONFLICTS=$(git diff --name-only --diff-filter=U | tr '\n' ' ' | xargs)
+              if [ "$CONFLICTS" = "package.json" ]; then
+                jq --arg v "$TARGET" '.version=$v' package.json > package.json.tmp && mv package.json.tmp package.json
+                git add package.json
+                echo "Conflitto solo su package.json risolto a ${TARGET}."
+              else
+                echo "::error::Conflitto reale su: ${CONFLICTS} (branch ${BR}). Rilascio interrotto, main NON toccato. Serve intervento umano."; exit 1
+              fi
+            fi
+            git commit -m "release: ${BR}" || echo "(nessuna modifica netta per ${BR})"
+          done
+
+          # 4) Forza versione target
+          jq --arg v "$TARGET" '.version=$v' package.json > package.json.tmp && mv package.json.tmp package.json
+          git add package.json
+          git commit -m "release: bump versione a ${TARGET}" || true
+
+          if [ "${DRY_RUN}" = "true" ]; then
+            echo "DRY RUN: mi fermo. Rilascerei v${TARGET} con: $(echo $KEYS | tr '\n' ' ')"
+            exit 0
+          fi
+
+          # 5) Push branch di rilascio + PR unica verso main + merge via API (squash)
+          git push origin "$RELBR"
+          BODY="Release train di fine sprint.\n\nVersione: v${TARGET}\nCard incluse:\n$(for K in $KEYS; do echo "- ${K}"; done)"
+          PR_URL=$(gh pr create --base main --head "$RELBR" \
+            --title "Release v${TARGET} (fine sprint)" --body "$(printf "%b" "$BODY")")
+          echo "PR creata: $PR_URL"
+          gh pr merge "$PR_URL" --squash --delete-branch --admin
+
+          # 6) Tag unico sulla nuova main + delete branch feature + card in Done
+          git fetch origin main --tags
+          git tag -a "v${TARGET}" -m "Release v${TARGET} (fine sprint)" origin/main
+          git push origin "v${TARGET}"
+
+          for K in $KEYS; do
+            git push origin --delete "features/${K}" || echo "(branch features/${K} già assente)"
+            TID=$(curl -sS "${JIRA_BASE_URL}/rest/api/2/issue/${K}/transitions" \
+              -H "Authorization: Basic ${AUTH}" -H "Accept: application/json" \
+              | jq -r --arg sid "$DONE_STATUS_ID" '.transitions[] | select(.to.id==$sid or .name=="Done") | .id' | head -n1)
+            if [ -n "$TID" ]; then
+              curl -sS -X POST "${JIRA_BASE_URL}/rest/api/2/issue/${K}/transitions" \
+                -H "Authorization: Basic ${AUTH}" -H "Content-Type: application/json" \
+                -d "{\"transition\":{\"id\":\"${TID}\"}}"
+              curl -sS -X POST "${JIRA_BASE_URL}/rest/api/2/issue/${K}/comment" \
+                -H "Authorization: Basic ${AUTH}" -H "Content-Type: application/json" \
+                -d "$(jq -n --arg v "v${TARGET}" '{body:("Rilasciata in " + $v + " e mergiata in main a fine sprint.")}')" >/dev/null || true
+              echo "Card ${K} → Done"
+            else
+              echo "::warning::Transizione Done non trovata per ${K}."
+            fi
+          done
+          echo "✅ Release v${TARGET} completata: $(echo $KEYS | tr '\n' ' ')"
