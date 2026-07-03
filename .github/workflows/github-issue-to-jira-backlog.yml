@@ -6,7 +6,7 @@ name: GitHub issue → Jira backlog (Bug)
 
 on:
   issues:
-    types: [opened]
+    types: [opened, reopened]
 
 # Privilegio minimo: al token automatico serve solo scrivere il commento sulla issue.
 permissions:
@@ -28,9 +28,10 @@ jobs:
     steps:
       - name: Crea card Bug su Jira e portala in stato "Bug"
         env:
-          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}   # es. https://riccioantonio19.atlassian.net
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}   # solo per il link "browse" umano, es. https://riccioantonio19.atlassian.net
           JIRA_EMAIL:    ${{ secrets.JIRA_EMAIL }}       # es. riccio.antonio19@gmail.com
-          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}  # API token da id.atlassian.com
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}  # API token CON AMBITO (scoped) da id.atlassian.com
+          JIRA_CLOUD_ID: "0e980c79-59b4-465f-aec7-6764867db7d1"   # non è un segreto; i token scoped richiedono il gateway api.atlassian.com/ex/jira/<cloudId>
           JIRA_PROJECT_KEY: "SO"
           JIRA_ISSUE_TYPE: "Bug"
           JIRA_TARGET_STATUS: "Bug"
@@ -42,10 +43,12 @@ jobs:
         run: |
           set -euo pipefail
           AUTH=$(printf '%s:%s' "$JIRA_EMAIL" "$JIRA_API_TOKEN" | base64 | tr -d '\n')
+          # I token scoped funzionano SOLO sul gateway api.atlassian.com/ex/jira/<cloudId>, non sull'URL del sito.
+          JIRA_API="https://api.atlassian.com/ex/jira/${JIRA_CLOUD_ID}"
 
           # --- Dedup: esiste già una card che referenzia questa issue? (label gh-<num>) ---
           JQL="project = ${JIRA_PROJECT_KEY} AND labels = \"gh-${GH_NUMBER}\""
-          EXISTING=$(curl -sS -G "${JIRA_BASE_URL}/rest/api/2/search" \
+          EXISTING=$(curl -sS -G "${JIRA_API}/rest/api/2/search" \
             -H "Authorization: Basic ${AUTH}" \
             -H "Accept: application/json" \
             --data-urlencode "jql=${JQL}" \
@@ -68,7 +71,7 @@ jobs:
             --arg lbl "gh-${GH_NUMBER}" \
             '{fields:{project:{key:$pk}, issuetype:{name:$it}, summary:$sum, description:$desc, labels:["github",$lbl]}}')
 
-          RESP=$(curl -sS -X POST "${JIRA_BASE_URL}/rest/api/2/issue" \
+          RESP=$(curl -sS -X POST "${JIRA_API}/rest/api/2/issue" \
             -H "Authorization: Basic ${AUTH}" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD")
@@ -79,11 +82,11 @@ jobs:
           echo "Creata card ${KEY}"
 
           # --- Transizione verso lo stato "Bug" (lookup per nome, robusto) ---
-          TID=$(curl -sS "${JIRA_BASE_URL}/rest/api/2/issue/${KEY}/transitions" \
+          TID=$(curl -sS "${JIRA_API}/rest/api/2/issue/${KEY}/transitions" \
             -H "Authorization: Basic ${AUTH}" -H "Accept: application/json" \
             | jq -r --arg s "$JIRA_TARGET_STATUS" '.transitions[] | select(.name==$s or .to.name==$s) | .id' | head -n1)
           if [ -n "$TID" ]; then
-            curl -sS -X POST "${JIRA_BASE_URL}/rest/api/2/issue/${KEY}/transitions" \
+            curl -sS -X POST "${JIRA_API}/rest/api/2/issue/${KEY}/transitions" \
               -H "Authorization: Basic ${AUTH}" -H "Content-Type: application/json" \
               -d "{\"transition\":{\"id\":\"${TID}\"}}"
             echo "Spostata ${KEY} in stato ${JIRA_TARGET_STATUS}"
