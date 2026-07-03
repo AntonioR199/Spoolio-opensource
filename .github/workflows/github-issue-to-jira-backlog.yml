@@ -35,6 +35,7 @@ jobs:
           JIRA_PROJECT_KEY: "SO"
           JIRA_ISSUE_TYPE: "Bug"
           JIRA_TARGET_STATUS: "Bug"
+          JIRA_ASSIGNEE: "5b4273b52c5b580659f73c52"   # Antonio: i bug nascono assegnati a lui per la triage/validazione
           GH_TITLE: ${{ github.event.issue.title }}
           GH_NUMBER: ${{ github.event.issue.number }}
           GH_URL: ${{ github.event.issue.html_url }}
@@ -71,7 +72,8 @@ jobs:
             --arg sum "[GH-#${GH_NUMBER}] ${GH_TITLE}" \
             --arg desc "$DESC" \
             --arg lbl "gh-${GH_NUMBER}" \
-            '{fields:{project:{key:$pk}, issuetype:{name:$it}, summary:$sum, description:$desc, labels:["github",$lbl]}}')
+            --arg aid "$JIRA_ASSIGNEE" \
+            '{fields:{project:{key:$pk}, issuetype:{name:$it}, summary:$sum, description:$desc, labels:["github",$lbl], assignee:{accountId:$aid}}}')
 
           RESP=$(curl -sS -X POST "${JIRA_API}/rest/api/2/issue" \
             -H "Authorization: Basic ${AUTH}" \
