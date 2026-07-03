@@ -31,6 +31,7 @@ jobs:
       JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
       JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
       JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+      JIRA_CLOUD_ID: "0e980c79-59b4-465f-aec7-6764867db7d1"   # token scoped → gateway api.atlassian.com/ex/jira/<cloudId>
       JIRA_PROJECT_KEY: "SO"
       DONE_STATUS_ID: "10008"
       DRY_RUN: ${{ inputs.dry_run }}
@@ -46,10 +47,11 @@ jobs:
         run: |
           set -euo pipefail
           AUTH=$(printf '%s:%s' "$JIRA_EMAIL" "$JIRA_API_TOKEN" | base64 | tr -d '\n')
+          JIRA_API="https://api.atlassian.com/ex/jira/${JIRA_CLOUD_ID}"   # gateway richiesto dai token scoped
 
           # 1) Card in "To Release"
           JQL="project = ${JIRA_PROJECT_KEY} AND status = \"To Release\" ORDER BY key ASC"
-          RESP=$(curl -sS -G "${JIRA_BASE_URL}/rest/api/2/search" \
+          RESP=$(curl -sS -G "${JIRA_API}/rest/api/2/search" \
             -H "Authorization: Basic ${AUTH}" -H "Accept: application/json" \
             --data-urlencode "jql=${JQL}" --data-urlencode "fields=key" --data-urlencode "maxResults=100")
           KEYS=$(echo "$RESP" | jq -r '.issues[].key')
@@ -119,14 +121,14 @@ jobs:
 
           for K in $KEYS; do
             git push origin --delete "features/${K}" || echo "(branch features/${K} già assente)"
-            TID=$(curl -sS "${JIRA_BASE_URL}/rest/api/2/issue/${K}/transitions" \
+            TID=$(curl -sS "${JIRA_API}/rest/api/2/issue/${K}/transitions" \
               -H "Authorization: Basic ${AUTH}" -H "Accept: application/json" \
               | jq -r --arg sid "$DONE_STATUS_ID" '.transitions[] | select(.to.id==$sid or .name=="Done") | .id' | head -n1)
             if [ -n "$TID" ]; then
-              curl -sS -X POST "${JIRA_BASE_URL}/rest/api/2/issue/${K}/transitions" \
+              curl -sS -X POST "${JIRA_API}/rest/api/2/issue/${K}/transitions" \
                 -H "Authorization: Basic ${AUTH}" -H "Content-Type: application/json" \
                 -d "{\"transition\":{\"id\":\"${TID}\"}}"
-              curl -sS -X POST "${JIRA_BASE_URL}/rest/api/2/issue/${K}/comment" \
+              curl -sS -X POST "${JIRA_API}/rest/api/2/issue/${K}/comment" \
                 -H "Authorization: Basic ${AUTH}" -H "Content-Type: application/json" \
                 -d "$(jq -n --arg v "v${TARGET}" '{body:("Rilasciata in " + $v + " e mergiata in main a fine sprint.")}')" >/dev/null || true
               echo "Card ${K} → Done"
