@@ -47,12 +47,14 @@ jobs:
           JIRA_API="https://api.atlassian.com/ex/jira/${JIRA_CLOUD_ID}"
 
           # --- Dedup: esiste già una card che referenzia questa issue? (label gh-<num>) ---
+          # Nuovo endpoint /rest/api/3/search/jql (il vecchio /search è stato rimosso da Atlassian).
           JQL="project = ${JIRA_PROJECT_KEY} AND labels = \"gh-${GH_NUMBER}\""
-          EXISTING=$(curl -sS -G "${JIRA_API}/rest/api/2/search" \
+          SEARCH_BODY=$(jq -n --arg jql "$JQL" '{jql:$jql, fields:["key"], maxResults:1}')
+          EXISTING=$(curl -sS -X POST "${JIRA_API}/rest/api/3/search/jql" \
             -H "Authorization: Basic ${AUTH}" \
             -H "Accept: application/json" \
-            --data-urlencode "jql=${JQL}" \
-            --data-urlencode "maxResults=1" | jq -r '.total // 0')
+            -H "Content-Type: application/json" \
+            -d "$SEARCH_BODY" | jq -r '(.issues // []) | length')
           if [ "${EXISTING}" != "0" ]; then
             echo "Card già esistente per gh-${GH_NUMBER}, salto."
             exit 0
