@@ -164,7 +164,6 @@ Spoolio è gratuito e source-available. Se ti è utile e vuoi offrirmi un caffè
 
 - Tracking a grammi (`remaining_g`) con pesata bobina
 - Import fattura direttamente dall'assistente
-- **Lavorazione autonoma con Jira**: un dev bot partecipa allo sviluppo tramite Jira
 
 ## Licenza
 
