@@ -1,4 +1,5 @@
-# Spoolio 🧵
+<img src="public/spoolio-logo-scritta.png" alt="Spoolio" width="420"/>
+
 
 Il tuo magazzino filamenti per stampa 3D: colori, quantità, tipologia (PLA, PETG, …) e costi a colpo d'occhio, con import delle fatture via PDF e un assistente AI. Un progetto **DomoticLab**.
 
@@ -173,6 +174,15 @@ Codice **source-available**, **non** "open source" OSI: il vincolo non-commercia
 - **Commons Clause**: **non è consentito vendere** il software (né rivenderlo, né venderne hosting/consulenza il cui valore deriva sostanzialmente dal software).
 
 Il titolare del copyright (**DomoticLab**) mantiene tutti i diritti commerciali. Testo completo in [LICENSE](LICENSE).
+
+## Whitepaper
+
+[Agentic Scrum](Agentic-Scrum-Whitepaper-IT.pdf) — metodo human-in-the-loop, board-driven: Product Owner umano, agenti AI come team.
+
+- 🇮🇹 [Agentic-Scrum-Whitepaper-IT.pdf](Agentic-Scrum-Whitepaper-IT.pdf)
+- 🇬🇧 [Agentic-Scrum-Whitepaper-EN.pdf](Agentic-Scrum-Whitepaper-EN.pdf)
+
+Distribuito con licenza **CC BY 4.0**.
 
 ---
 
