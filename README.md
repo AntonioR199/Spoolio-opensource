@@ -179,7 +179,7 @@ Il titolare del copyright (**DomoticLab**) mantiene tutti i diritti commerciali.
 
 [Agentic Scrum](https://zenodo.org/records/21270019) — metodo human-in-the-loop, board-driven: Product Owner umano, agenti AI come team.
 
-- [https://zenodo.org/records/21270019](Agentic Scrum Whitepaper)
+- [https://zenodo.org/records/21270019]
 
 Distribuito con licenza **CC BY 4.0**.
 
