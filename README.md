@@ -175,14 +175,4 @@ Codice **source-available**, **non** "open source" OSI: il vincolo non-commercia
 
 Il titolare del copyright (**DomoticLab**) mantiene tutti i diritti commerciali. Testo completo in [LICENSE](LICENSE).
 
-## Whitepaper
-
-[Agentic Scrum](https://zenodo.org/records/21270019) — metodo human-in-the-loop, board-driven: Product Owner umano, agenti AI come team.
-
-- [https://zenodo.org/records/21270019](Agentic Scrum Whitepaper)
-
-Distribuito con licenza **CC BY 4.0**.
-
----
-
 ™ **DomoticLab** 2025-2026 — [domotic-lab.it](https://www.domotic-lab.it/).
