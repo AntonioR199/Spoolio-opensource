@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Thermometer, Layers, Clock, AlertTriangle, Loader2, WifiOff } from "lucide-react";
 import type { PrinterStatus, PrintState } from "@/lib/printer-monitor/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useBrowserNotifications } from "@/lib/useBrowserNotifications";
 
 const POLL_MS = 10_000;
 
@@ -45,6 +46,8 @@ function formatRemaining(sec: number): string {
 export function PrinterStatusCard({ printerId, title }: { printerId: number; title?: string }) {
   const [status, setStatus] = useState<PrinterStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const { notify } = useBrowserNotifications();
+  const prevStateRef = useRef<PrintState | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -66,6 +69,26 @@ export function PrinterStatusCard({ printerId, title }: { printerId: number; tit
       clearInterval(t);
     };
   }, [printerId]);
+
+  // Notifiche browser su transizioni di stato
+  useEffect(() => {
+    if (!status) return;
+    const prev = prevStateRef.current;
+    prevStateRef.current = status.state;
+    if (prev === "RUNNING" && status.state === "FINISH") {
+      notify("Stampa completata", {
+        body: status.job?.fileName
+          ? `La stampa di ${status.job.fileName} è terminata.`
+          : "La stampa è terminata.",
+      });
+    } else if (prev === "RUNNING" && status.state === "FAILED") {
+      notify("Stampa fallita", {
+        body: status.job?.fileName
+          ? `Errore durante la stampa di ${status.job.fileName}.`
+          : "La stampa ha riportato un errore.",
+      });
+    }
+  }, [status, notify]);
 
   if (loading && !status) {
     return (

@@ -3,14 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Download, Database, Check, X, Upload, KeyRound } from "lucide-react";
+import { Download, Database, Check, X, Upload, KeyRound, Bug } from "lucide-react";
 import type { AppSettings } from "@/lib/settings";
+import { useBrowserNotifications } from "@/lib/useBrowserNotifications";
 
 type Provider = { id: string; label: string; defaultModel: string; keyHint: string };
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -36,6 +38,7 @@ export default function ImpostazioniPage() {
   const [saving, setSaving] = useState(false);
   const dbInputRef = useRef<HTMLInputElement>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
+  const { notify } = useBrowserNotifications();
 
   function loadSettings() {
     fetch("/api/settings")
@@ -399,6 +402,66 @@ export default function ImpostazioniPage() {
                   </Button>
                 )}
               </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Sviluppo */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Bug className="h-4 w-4" /> Sviluppo
+          </CardTitle>
+          <CardDescription>
+            Modalità sviluppatore — funzioni di test e debug.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {!settings ? (
+            <p className="text-sm text-muted-foreground">Caricamento…</p>
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="developerMode"
+                  checked={settings.developerMode}
+                  onCheckedChange={(checked) =>
+                    set("developerMode", checked === true)
+                  }
+                />
+                <Label htmlFor="developerMode">Modalità sviluppatore</Label>
+              </div>
+
+              {settings.developerMode && (
+                <div className="space-y-2 rounded-lg border p-3">
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    Dry run notifiche
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        notify("Dry run: stampa completata", {
+                          body: "Test — la stampa di Benchy.gcode è terminata.",
+                        })
+                      }
+                    >
+                      Test notifica stampa
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        notify("Dry run: bobine da asciugare", {
+                          body: "Test — hai 3 bobine da asciugare nell'inventario.",
+                        })
+                      }
+                    >
+                      Test notifica asciugatura
+                    </Button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </CardContent>
