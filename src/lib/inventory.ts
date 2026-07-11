@@ -202,6 +202,31 @@ export async function getConsumptionByMonth(n = 6): Promise<Array<{ month: strin
   return out;
 }
 
+/** Storico consumi: bobine finite (status='empty') con data consumo, per esportazione CSV. */
+export interface ConsumptionRow {
+  brand: string;
+  material: string;
+  variant: string | null;
+  color_name: string;
+  color_code: string | null;
+  color_hex: string | null;
+  sku: string | null;
+  nominal_weight_g: number | null;
+  unit_price: number | null;
+  consumed_at: string | null;
+}
+
+export async function getConsumptionHistory(): Promise<ConsumptionRow[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("spool")
+    .select("brand, material, variant, color_name, color_code, color_hex, sku, nominal_weight_g, unit_price, consumed_at")
+    .eq("status", "empty")
+    .not("consumed_at", "is", null)
+    .order("consumed_at", { ascending: false });
+  return (data ?? []) as ConsumptionRow[];
+}
+
 /** Inserisce le voci confermate, espandendo la quantità in righe singole. */
 export async function insertSpools(items: DraftItem[], source: string, purchaseDate: string | null): Promise<number> {
   const supabase = await createClient();
