@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -102,6 +102,21 @@ export default function ImpostazioniPage() {
 
   function set<K extends keyof AppSettings>(k: K, v: AppSettings[K]) {
     setSettings((p) => (p ? { ...p, [k]: v } : p));
+  }
+
+  async function setDeveloperMode(checked: boolean) {
+    set("developerMode", checked);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ developerMode: checked }),
+      });
+      if (!res.ok) throw new Error("Salvataggio non riuscito");
+    } catch (e) {
+      set("developerMode", !checked);
+      toast.error((e as Error).message);
+    }
   }
 
   async function save() {
@@ -423,12 +438,10 @@ export default function ImpostazioniPage() {
           ) : (
             <>
               <div className="flex items-center gap-2">
-                <Checkbox
+                <Switch
                   id="developerMode"
                   checked={settings.developerMode}
-                  onCheckedChange={(checked) =>
-                    set("developerMode", checked === true)
-                  }
+                  onCheckedChange={(checked) => setDeveloperMode(checked === true)}
                 />
                 <Label htmlFor="developerMode">Modalità sviluppatore</Label>
               </div>

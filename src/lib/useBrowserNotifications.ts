@@ -9,25 +9,41 @@ export function useBrowserNotifications() {
 
   useEffect(() => {
     if (typeof Notification === "undefined") return;
-    if (permission === "granted" || permission === "denied") return;
-    // permission === "default" → chiediamo
+    // Il permesso può cambiare da un'altra tab/scheda del sito o dalle impostazioni
+    // del browser senza che questo componente venga rimontato: risincronizziamo
+    // quando la finestra torna in primo piano invece di fidarci solo dello state
+    // letto al mount.
+    const sync = () => setPermission(Notification.permission);
+    sync();
+    window.addEventListener("focus", sync);
+    return () => window.removeEventListener("focus", sync);
+  }, []);
+
+  useEffect(() => {
+    if (typeof Notification === "undefined") return;
+    if (permission !== "default") return;
     Notification.requestPermission().then((p) => {
       setPermission(p);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [permission]);
 
   const notify = useCallback(
     (title: string, opts?: NotificationOptions) => {
-      if (typeof Notification === "undefined") return;
-      if (permission !== "granted") return;
+      if (typeof Notification === "undefined") {
+        console.warn("[notify] Notification API non disponibile in questo browser.");
+        return;
+      }
+      if (Notification.permission !== "granted") {
+        console.warn(`[notify] permesso notifiche non concesso (${Notification.permission}).`);
+        return;
+      }
       try {
         new Notification(title, { icon: "/spoolio-logo.png", ...opts });
-      } catch {
-        // silenzioso
+      } catch (e) {
+        console.error("[notify] creazione Notification fallita:", e);
       }
     },
-    [permission],
+    [],
   );
 
   return {
