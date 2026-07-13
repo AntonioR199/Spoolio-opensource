@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ExternalLink, RotateCcw, PackageX } from "lucide-react";
+import { ExternalLink, RotateCcw, PackageX, Download } from "lucide-react";
 import { toast } from "sonner";
 import type { EmptyRow } from "@/lib/types";
 import { Card } from "@/components/ui/card";
@@ -65,11 +65,21 @@ export default function EsauritiPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Esauriti</h1>
-        <p className="text-sm text-muted-foreground">
-          I tuoi filamenti finiti: ripristinali se li ricompri, o riordina al volo.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Esauriti</h1>
+          <p className="text-sm text-muted-foreground">
+            I tuoi filamenti finiti: ripristinali se li ricompri, o riordina al volo.
+          </p>
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          nativeButton={false}
+          render={<a href="/api/export/consumption" />}
+        >
+          <Download className="h-3.5 w-3.5" /> Esporta CSV
+        </Button>
       </div>
 
       {rows === null && <p className="text-sm text-muted-foreground">Caricamento…</p>}
