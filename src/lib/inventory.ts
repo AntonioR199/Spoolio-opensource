@@ -202,6 +202,25 @@ export async function getConsumptionByMonth(n = 6): Promise<Array<{ month: strin
   return out;
 }
 
+/** Storico prezzi per materiale nel tempo (per il grafico dashboard). */
+export async function getPriceHistory(): Promise<
+  Array<{ purchaseDate: string; material: string; brand: string; unitPrice: number }>
+> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("spool")
+    .select("purchase_date, unit_price, material, brand")
+    .not("purchase_date", "is", null)
+    .not("unit_price", "is", null)
+    .order("purchase_date", { ascending: true });
+  return (data ?? []).map((r) => ({
+    purchaseDate: r.purchase_date as string,
+    material: r.material as string,
+    brand: r.brand as string,
+    unitPrice: Number(r.unit_price),
+  }));
+}
+
 /** Storico consumi: bobine finite (status='empty') con data consumo, per esportazione CSV. */
 export interface ConsumptionRow {
   brand: string;

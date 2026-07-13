@@ -12,7 +12,7 @@ import {
   TrendingUp,
   Layers,
 } from "lucide-react";
-import { getInventory, getStats, getValueByMaterial, getConsumptionByMonth } from "@/lib/inventory";
+import { getInventory, getStats, getValueByMaterial, getConsumptionByMonth, getPriceHistory } from "@/lib/inventory";
 import { buildRepurchaseUrl } from "@/lib/catalog";
 import { listInvoices } from "@/lib/invoices";
 import { getDefaultPrinter } from "@/lib/printers";
@@ -21,6 +21,7 @@ import { typeLabel } from "@/lib/labels";
 import { PrinterThumb } from "@/components/PrinterThumb";
 import { PrinterStatusCard } from "@/components/PrinterStatusCard";
 import DryingNotifications from "@/components/DryingNotifications";
+import { PriceHistoryChart } from "@/components/PriceHistoryChart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,13 +29,14 @@ import { Button } from "@/components/ui/button";
 export const dynamic = "force-dynamic";
 
 export default async function Dashboard() {
-  const [stats, rows, invoicesAll, printer, valueByMaterial, consumption] = await Promise.all([
+  const [stats, rows, invoicesAll, printer, valueByMaterial, consumption, priceHistory] = await Promise.all([
     getStats(),
     getInventory(),
     listInvoices(),
     getDefaultPrinter(),
     getValueByMaterial(),
     getConsumptionByMonth(6),
+    getPriceHistory(),
   ]);
   const lowStock = rows.filter((r) => r.low_stock);
   const invoices = invoicesAll.slice(0, 5);
@@ -226,6 +228,8 @@ export default async function Dashboard() {
             ))}
           </CardContent>
         </Card>
+
+        <PriceHistoryChart data={priceHistory} />
 
         {/* Palette multicolore AMS */}
         <Card>
