@@ -12,6 +12,7 @@ export interface AppSettings {
   aiProvider: string;
   aiModel: string;
   aiBaseUrl: string;
+  developerMode: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -24,6 +25,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   aiProvider: "claude",
   aiModel: "",
   aiBaseUrl: "",
+  developerMode: false,
 };
 
 export async function getSettings(): Promise<AppSettings> {
@@ -47,6 +49,7 @@ export async function getSettings(): Promise<AppSettings> {
     aiProvider: map.get("aiProvider") ?? DEFAULT_SETTINGS.aiProvider,
     aiModel: map.get("aiModel") ?? DEFAULT_SETTINGS.aiModel,
     aiBaseUrl: map.get("aiBaseUrl") ?? DEFAULT_SETTINGS.aiBaseUrl,
+    developerMode: map.get("developerMode") === "true",
   };
 }
 

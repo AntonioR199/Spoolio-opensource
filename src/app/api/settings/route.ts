@@ -27,6 +27,7 @@ const schema = z.object({
   aiProvider: z.string().optional(),
   aiModel: z.string().optional(),
   aiBaseUrl: z.string().optional(),
+  developerMode: z.boolean().optional(),
   aiApiKey: z.string().optional(), // gestita a parte (write-only)
 });
 

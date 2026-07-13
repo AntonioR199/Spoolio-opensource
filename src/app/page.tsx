@@ -20,6 +20,7 @@ import { getPaletteCoverage } from "@/lib/palette";
 import { typeLabel } from "@/lib/labels";
 import { PrinterThumb } from "@/components/PrinterThumb";
 import { PrinterStatusCard } from "@/components/PrinterStatusCard";
+import DryingNotifications from "@/components/DryingNotifications";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -59,6 +60,8 @@ export default async function Dashboard() {
 
   return (
     <div className="space-y-6">
+      <DryingNotifications dryCount={rows.filter((r) => r.needs_drying).length} />
+
       <div>
         <h1 className="text-2xl font-bold tracking-tight">La tua dashboard</h1>
         <p className="text-sm text-muted-foreground">
