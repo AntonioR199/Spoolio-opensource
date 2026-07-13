@@ -209,7 +209,6 @@ export interface ConsumptionRow {
   variant: string | null;
   color_name: string;
   color_code: string | null;
-  color_hex: string | null;
   sku: string | null;
   nominal_weight_g: number | null;
   unit_price: number | null;
@@ -220,7 +219,7 @@ export async function getConsumptionHistory(): Promise<ConsumptionRow[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("spool")
-    .select("brand, material, variant, color_name, color_code, color_hex, sku, nominal_weight_g, unit_price, consumed_at")
+    .select("brand, material, variant, color_name, color_code, sku, nominal_weight_g, unit_price, consumed_at")
     .eq("status", "empty")
     .not("consumed_at", "is", null)
     .order("consumed_at", { ascending: false });

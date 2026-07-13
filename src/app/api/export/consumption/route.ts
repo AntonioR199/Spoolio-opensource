@@ -6,14 +6,15 @@ export const dynamic = "force-dynamic";
 
 function csvCell(v: string | number | null): string {
   const s = v == null ? "" : String(v);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-// Esporta lo storico consumi in CSV.
+// Esporta lo storico consumi in CSV. Delimitatore ";" per l'apertura diretta
+// in Excel con impostazioni regionali italiane (virgola = separatore decimale).
 export async function GET() {
   const rows = await getConsumptionHistory();
   const header = ["Marca", "Materiale", "Variante", "Colore", "Codice", "SKU", "Peso (g)", "Prezzo (€)", "Data consumo"];
-  const lines = [header.join(",")];
+  const lines = [header.join(";")];
   for (const r of rows) {
     lines.push(
       [
@@ -26,7 +27,7 @@ export async function GET() {
         csvCell(r.nominal_weight_g),
         csvCell(r.unit_price != null ? String(r.unit_price) : null),
         csvCell(r.consumed_at ? r.consumed_at.slice(0, 10) : null),
-      ].join(",")
+      ].join(";")
     );
   }
   const csv = "\ufeff" + lines.join("\n"); // BOM per Excel
