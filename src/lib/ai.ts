@@ -24,6 +24,7 @@ export const AI_PROVIDERS: AiProvider[] = [
   { id: "gemini", label: "Google Gemini", kind: "openai", baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", defaultModel: "gemini-2.0-flash", keyHint: "AIza…" },
   { id: "deepseek", label: "DeepSeek", kind: "openai", baseUrl: "https://api.deepseek.com", defaultModel: "deepseek-chat", keyHint: "sk-…" },
   { id: "nvidia", label: "NVIDIA NIM", kind: "openai", baseUrl: "https://integrate.api.nvidia.com/v1", defaultModel: "meta/llama-3.1-70b-instruct", keyHint: "nvapi-…" },
+  { id: "opencode-zen", label: "OpenCode Zen", kind: "openai", baseUrl: "https://opencode.ai/zen/v1", defaultModel: "deepseek-v4-flash-free", keyHint: "oc-zen-…" },
   { id: "custom", label: "OpenAI compatibile (custom)", kind: "openai", defaultModel: "", keyHint: "" },
 ];
 
